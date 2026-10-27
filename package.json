@@ -1,0 +1,15 @@
+{
+  "name": "vesso-fin",
+  "private": true,
+  "packageManager": "pnpm@10.34.7",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "pnpm -r test",
+    "test:sql": "bash scripts/test-sql.sh",
+    "typecheck": "pnpm -r typecheck",
+    "test:api": "bash scripts/test-api.sh",
+    "test:db": "bash scripts/test-db.sh"
+  }
+}

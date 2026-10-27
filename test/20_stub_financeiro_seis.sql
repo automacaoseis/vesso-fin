@@ -48,8 +48,9 @@ UNION ALL
      LEFT JOIN financeiro_seis.categorias cat ON cat.id_categoria = lm.id_categoria
      LEFT JOIN financeiro_seis.categorias_macro cm ON cm.id_categoria_macro = cat.id_categoria_macro;
 
+-- id_empresa: a view real tem (conferido em produção em 27/10/2026); a conferência por org da 0006 usa.
 create view financeiro_seis.v_dre_seis as
- SELECT regime_competencia AS competencia, value, projecao, id_produto,
+ SELECT regime_competencia AS competencia, value, projecao, id_produto, id_empresa,
    CASE WHEN id_categoria IS NULL THEN 'NAO_CATEGORIZADO'
         WHEN categoria_macro = 'Receita' AND direcao = 'Crédito' THEN 'RECEITA_BRUTA'
         WHEN categoria_macro = 'Receita' AND direcao = 'Débito' THEN 'DEDUCOES'
@@ -113,3 +114,10 @@ insert into financeiro_seis.lancamentos_manuais values
   ('M4', :S, null, 'CAT_TRANSFERENCIAS_ENTRE_CONTAS', '2026-09-25', 1000, 'Nubank', 'Pago', null, 'Transf do Asaas', null, null, :TR), -- F
   ('M5', :T, 'ENT_CLI1_TASK', 'CAT_PAGAMENTO_VARIAVEL', '2026-09-10', 900, 'Asaas', 'Pago', null, 'Variável ago', null, null, '94c8fb16-0d6d-4962-a179-22eb332cb2cd'), -- C
   ('M6', :S, null, 'CAT_SOFTWARES_ADMINISTRATIVOS', '2026-12-10', -450, 'Asaas', 'Em Aberto', null, 'Renovação anual', null, null, :TR); -- G
+
+-- 0006: transferência ENTRE as empresas (Seis Asaas → Task SV Nubank). Com uma org por empresa, não pareia
+-- como transferência (são orgs diferentes): vira ignorada nos dois lados, com motivo próprio. Fora do DRE nos dois.
+insert into financeiro_seis.extrato_asaas values
+  ('A12', :S, null, '2026-09-15', -250, 'TRANSFER', 'Transf p/ Task SV', 'CAT_TRANSFERENCIAS_ENTRE_CONTAS', null, :TR);
+insert into financeiro_seis.lancamentos_manuais values
+  ('M7', :T, null, 'CAT_TRANSFERENCIAS_ENTRE_CONTAS', '2026-09-15', 250, 'Nubank', 'Pago', null, 'Aporte da Seis', null, null, '94c8fb16-0d6d-4962-a179-22eb332cb2cd');

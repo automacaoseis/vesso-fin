@@ -1,0 +1,742 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   PALETA — os valores de verdade dos tokens de `src/lib/theme.ts`.
+
+   Lá cada chave devolve `var(--v-<chave>)`; é AQUI que a var ganha valor. Dois blocos:
+   `:root` (claro, o padrão) e `[data-theme="dark"]` (escuro). O nome da var é o nome da
+   chave, camelCase preservado — ver a nota no topo de `theme.ts`.
+
+   ⚠️ **CLARO É O PADRÃO, e não por inércia.** A prancha "Paleta de cores" (p.76) declara
+   40% off-white contra 30% ink: o fundo dominante da marca é o papel. O escuro é uma
+   preferência que a pessoa liga; quem nunca escolheu nada, e quem abre o app pela primeira
+   vez, vê a marca na proporção em que ela foi desenhada. Por isso `:root` é o claro puro e
+   NÃO há `@media (prefers-color-scheme: dark)` — a preferência do sistema operacional não
+   decide sozinha (ver a nota em `lib/tema.ts`).
+
+   ⚠️ Todo token precisa de valor NOS DOIS blocos. Faltando em um, a var cai em `unset` e o
+   navegador **descarta a declaração sem erro nenhum** — o elemento fica sem cor, e ninguém vê
+   um erro. Confira com `npm run check:tema`.
+
+   ─────────────────────────────────────────────────────────────────────────────
+   DE ONDE VÊM OS VALORES DO ESCURO — cada um traz a prancha e o degrau.
+
+     "Sombras"   (02_Cores/Sombras.png,   p.78) — claro ↔ escuro, 16 amostras por cor
+     "Saturação" (02_Cores/Saturação.png, p.79) — vivo  ↔ dessaturado, idem
+     "Grade de contraste" (p.81) — a régua de aceite: sobre ink `#111719`, a matriz aprova
+       SÓ creme `#F5EAC4`, off-white `#FFFDF5` e branco. Petróleo `#587F88` e cinza `#757575`
+       estão RISCADOS — por isso, no escuro, os dois sobem na própria rampa de Sombras.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Superfícies — rampa quente clara, sem branco puro ───────────────────── */
+  --v-bg: #FFFDF5;        /* off-white oficial — o papel */
+  --v-card: #FDFBF2;      /* cartão: meio degrau mais fundo. Quem separa é o fio */
+  --v-surface: #FDFBF2;
+  --v-panel: #F8F3E6;
+  --v-surface2: #F8F3E6;
+  --v-surface3: #F1EBD9;
+  --v-surface4: #E9E1CB;
+  --v-topbar: #FFFDF5;
+
+  /* ── Bordas — fio quente derivado do off-white ───────────────────────────── */
+  --v-borderFaint: #EFE8D6;
+  --v-border: #E4DCC8;
+  --v-borderMid: #E2DAC6;
+  --v-border2: #DCD3BD;
+  --v-border3: #D2C8AE;
+  --v-borderStrong: #E2DAC6;
+  --v-borderVivid: #C4B99C;
+  --v-borderBtn: #B0A386;
+
+  /* ── Texto — ink oficial e seus degraus até o cinza da marca ─────────────── */
+  --v-text: #111719;
+  --v-text2: #394144;
+  --v-text3: #6A7275;     /* vizinho do #757575 oficial */
+  --v-text4: #9BA1A3;
+
+  /* ── Acento — petróleo. No claro ele PASSA sobre papel ───────────────────── */
+  --v-creme: #F5EAC4;
+  /* Realce = estado ativo. No claro é o que já era: ink onde o controle usa ink, petróleo
+     onde usa petróleo. Ver a nota do token em `theme.ts`. */
+  --v-realce: #111719;
+  --v-realceAcento: #587F88;
+  --v-realceBg: rgba(88, 127, 136, 0.07);
+  --v-realceBg2: rgba(88, 127, 136, 0.11);
+  --v-faixaGrupo: rgba(245, 234, 196, 0.4);  /* creme 40% — bege que agrupa sobre papel */
+  --v-accent: #587F88;
+  --v-accentHover: #476870;
+  --v-accentBg: rgba(88, 127, 136, 0.07);
+  --v-accentBg2: rgba(88, 127, 136, 0.11);
+  --v-accentBg3: rgba(88, 127, 136, 0.15);
+  --v-accentBg4: rgba(88, 127, 136, 0.2);
+  --v-accentBorder: rgba(88, 127, 136, 0.34);
+
+  /* ── Status — dessaturados, na temperatura da marca ──────────────────────── */
+  --v-positive: #4F7A6B;  /* ⚠️ DERIVAÇÃO: a marca não tem verde. Puxado do petróleo */
+  --v-positiveBg: rgba(79, 122, 107, 0.09);
+  --v-positiveBg2: rgba(79, 122, 107, 0.13);
+  --v-positiveBg3: rgba(79, 122, 107, 0.2);
+
+  --v-warning: #B08B36;   /* ocre do creme */
+  --v-warningBg: rgba(176, 139, 54, 0.1);
+  --v-warningBg2: rgba(176, 139, 54, 0.14);
+  --v-warningBg3: rgba(176, 139, 54, 0.22);
+
+  --v-negative: #A0503F;  /* tijolo apagado, não vermelho */
+  --v-negativeBg: rgba(160, 80, 63, 0.08);
+  --v-negativeBg2: rgba(160, 80, 63, 0.12);
+  --v-negativeBg3: rgba(160, 80, 63, 0.16);
+  --v-negativeBg4: rgba(160, 80, 63, 0.22);
+
+  --v-danger: #8A4234;
+  --v-dangerBg: rgba(138, 66, 52, 0.12);
+
+  /* ── Institucional / séries de gráfico ───────────────────────────────────── */
+  --v-verde: #3E5641;
+  --v-blue: #587F88;
+  --v-purple: #6F6480;
+  --v-coral: #A0503F;
+
+  /* ── Superfícies sutis / overlays — ink com alfa ─────────────────────────── */
+  --v-hoverBg: rgba(17, 23, 25, 0.035);
+  --v-subtleBg: rgba(17, 23, 25, 0.05);
+  --v-overlay: rgba(17, 23, 25, 0.45);
+  --v-overlay2: rgba(17, 23, 25, 0.35);
+
+  /* ── Superfície invertida — as peças que JÁ eram escuras no tema claro ───── */
+  --v-invAccentBg: #587F88; /* petróleo 0% — bloco cheio de acento */
+  /* Gradiente de acento: variação DENTRO do petróleo, não uma segunda cor. Calibrado para
+     texto de 9,5px — 7,1:1 no início e 5,3:1 no fim. ⚠️ Não abra até `#587F88`: lá dá 4,29:1
+     e o rótulo reprova. */
+  --v-invAccentGrad1: #3E5C63;
+  --v-invAccentGrad2: #4E727B;
+  --v-invBg: #111719;     /* ink oficial: faixa de KPIs, metade do login, card em destaque */
+  --v-invBg2: #1F2B32;    /* segunda parada do gradiente */
+  --v-invText: #FFFDF5;   /* ~15:1 sobre ink — a linha aprovada da grade */
+  --v-invText3: rgba(255, 253, 245, 0.6);
+  --v-invAccent: #F5EAC4; /* creme: "realce sobre escuro", como a prancha manda */
+  --v-invPositive: #8FBFA8;
+  --v-invNegative: #E0917D;
+
+  --v-shadow: 0 1px 2px rgba(17, 23, 25, 0.05);
+
+  /* Aliases herdados — o body e a scrollbar abaixo os consomem. */
+  --vesso-bg: var(--v-bg);
+  --vesso-surface: var(--v-card);
+  --vesso-text: var(--v-text);
+  --vesso-border: var(--v-border);
+  /* Fundo das colunas fixas em tabela (ver a camada responsiva no fim do arquivo).
+     ⚠️ Precisa ser OPACO: coluna sticky transparente deixa passar o que rola por baixo. */
+  --v-fix-bg: var(--v-card);
+  --v-scrollbar: rgba(36, 31, 26, 0.16);
+  --v-scrollbarHover: rgba(36, 31, 26, 0.28);
+
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  /* ── Superfícies — a mesma rampa, espelhada: o que está em cima recebe LUZ ──
+     ⚠️ **OS DEGRAUS SÃO OS MESMOS DO CLARO, MEDIDOS EM L\* (CIELab)** — 0,7 · 3,4 · 6,2 · 9,6.
+     L\* é perceptualmente uniforme: Δ igual = diferença igual aos olhos, perto do branco ou
+     perto do preto. Então a hierarquia de superfície fala a MESMA língua nos dois temas.
+
+     ⚠️ A primeira versão usava a coluna do ink da prancha "Saturação" (#141819 · #161819 ·
+     #181919) e ficou ACHATADA: medida, dava Δ 0,6 · 0,8 · 1,4 contra 0,7 · 3,4 · 6,2 do
+     claro — `panel` e `surface3` quatro vezes mais rasos, e depois um salto para Δ14,4.
+     Numa tabela densa (a Progressão empilha cabeçalho, coluna fixa e linhas de métrica em
+     superfícies diferentes) as camadas somem e a tela vira um borrão. Foi assim que o Luiz
+     a viu: "progressão não ficou muito bom".
+
+     ⚠️ Aquela rampa não servia porque ela DESSATURA — tira o azul do ink — em vez de
+     clarear; os 16 degraus dela cabem todos em Δ L\* 1,5. Quem clareia é a rampa "Sombras",
+     mas entre #111719 (0%) e #28363B (+12,5%) ela não publica nada. Então estes quatro
+     valores são **interpolação entre dois degraus oficiais consecutivos** — o caso previsto
+     pela regra: onde a prancha não alcança, derive dentro da família e diga que derivou. */
+  --v-bg: #111719;        /* ink oficial (paleta, p.76) — agora é o papel */
+  --v-card: #12181B;      /* Δ L* 0,7 */
+  --v-surface: #12181B;
+  --v-panel: #161E21;     /* Δ L* 3,4 */
+  --v-surface2: #161E21;
+  --v-surface3: #1B2427;  /* Δ L* 6,2 */
+  --v-surface4: #202B2F;  /* Δ L* 9,6 */
+  --v-topbar: #0E1415;    /* Sombras · ink −12,5% — a barra fica ABAIXO da página,
+                             senão ela flutua sobre o conteúdo em vez de ancorá-lo */
+
+  /* ── Bordas — off-white com alfa, NUNCA cinza frio ────────────────────────
+     ⚠️ DERIVAÇÃO consciente: a prancha dá degraus de cor pura, não fios translúcidos.
+     A cor é a oficial (`#FFFDF5`); o alfa é o meio. Cinza frio aqui faria a tela
+     escura parecer de outra marca — é o erro mais comum de dark mode. */
+  --v-borderFaint: rgba(255, 253, 245, 0.06);
+  --v-border: rgba(255, 253, 245, 0.1);
+  --v-borderMid: rgba(255, 253, 245, 0.14);
+  --v-border2: rgba(255, 253, 245, 0.18);
+  --v-border3: rgba(255, 253, 245, 0.24);
+  --v-borderStrong: rgba(255, 253, 245, 0.14);
+  --v-borderVivid: rgba(255, 253, 245, 0.32);
+  --v-borderBtn: rgba(255, 253, 245, 0.28);
+
+  /* ── Texto ────────────────────────────────────────────────────────────────
+     ⚠️ O cinza oficial `#757575` está RISCADO na grade de contraste sobre ink (medido
+     ~3,9:1, e a régua para texto pequeno é 4,5:1). Ele não sai da paleta — SOBE na
+     própria rampa de Sombras, onde volta a passar. */
+  --v-text: #FFFDF5;      /* off-white oficial — 15:1 sobre a página ✓ */
+  --v-text2: #C7C7C7;     /* Sombras · cinza +62,5% — 11:1 · 8,8:1 ✓ */
+  --v-text3: #A9A9A9;     /* Sombras · cinza +37,5% —  7,7:1 · 6,2:1 ✓ */
+  --v-text4: #989898;     /* Sombras · cinza +25%   —  6,3:1 · 5,0:1 ✓ (o piso: não desça) */
+  /* ⚠️ Os dois números são o contraste sobre a PÁGINA e sobre `surface4`, a superfície mais
+     clara — e a segunda é a que manda. `text4` estava em #878787 (+12,5%), que dá 5,0:1
+     sobre a página e passa, mas **4,0:1 sobre surface4** e reprova para texto pequeno. Num
+     tema claro esse risco não existe (as superfícies vão todas para o branco e o contraste
+     com o texto escuro só AUMENTA); no escuro elas vão na mesma direção do texto claro, e
+     cada degrau de superfície come contraste. Confira sempre contra a mais clara. */
+
+  /* ── Acento ───────────────────────────────────────────────────────────────
+     ⚠️ AQUI O CREME É O ACENTO. A grade de contraste aprova só creme, off-white e branco
+     sobre ink — e "realce sobre escuro" é o papel que a prancha da marca dá ao creme.
+     O petróleo não sai de cena: sobe na rampa de Sombras e volta a passar. */
+  --v-creme: #F5EAC4;     /* paleta — ~14,8:1 ✓ */
+  /* ⚠️ NO ESCURO OS DOIS VIRAM CREME. É o "realce sobre escuro" que a prancha da marca dá
+     ao creme, e o que devolve a ele a proporção de 15% que o brandbook pede — o app estava
+     em 293 usos de petróleo contra 16 de creme. Só no realce: a estrutura segue em petróleo. */
+  --v-realce: #F5EAC4;
+  --v-realceAcento: #F5EAC4;
+  /* ⚠️ Fundo do ativo em creme, senão a aba selecionada sai creme e o item de menu
+     selecionado ao lado sai petróleo — duas linguagens para a mesma ideia. */
+  --v-realceBg: rgba(245, 234, 196, 0.09);
+  --v-realceBg2: rgba(245, 234, 196, 0.14);
+  /* ⚠️ 40% aqui seria uma barra amarela sobre o ink, mais forte que o dado da tabela — mas
+     9% também era demais: medido em Δ L*, dava **9,4 contra 2,7 do claro**, 3,5× mais forte.
+     Alfa não se traduz de um tema para o outro; o que se traduz é a FORÇA PERCEBIDA. 4% põe
+     a faixa em Δ4,2 — um pouco acima do claro de propósito, porque no escuro ela concorre
+     com mais camadas de superfície, mas na mesma ordem de grandeza. */
+  --v-faixaGrupo: rgba(245, 234, 196, 0.04);
+  --v-accent: #7DA2AA;    /* Sombras · petróleo +25%  — ~6,4:1 ✓ (o 0% dá 4,1:1 e reprova) */
+  --v-accentHover: #93B2B8; /* Sombras · petróleo +37,5% */
+  --v-accentBg: rgba(125, 162, 170, 0.1);
+  --v-accentBg2: rgba(125, 162, 170, 0.14);
+  --v-accentBg3: rgba(125, 162, 170, 0.2);
+  --v-accentBg4: rgba(125, 162, 170, 0.26);
+  --v-accentBorder: rgba(125, 162, 170, 0.4);
+
+  /* ── Status ───────────────────────────────────────────────────────────────
+     Mesmas famílias do claro, subidas para passar sobre ink. */
+  --v-positive: #8FBFA8;  /* ⚠️ DERIVAÇÃO: não há verde na paleta nem nos 160 degraus.
+                             É o valor que `ui-portal` já usava para positivo sobre escuro —
+                             reusado para as duas superfícies não discordarem */
+  --v-positiveBg: rgba(143, 191, 168, 0.1);
+  --v-positiveBg2: rgba(143, 191, 168, 0.15);
+  --v-positiveBg3: rgba(143, 191, 168, 0.22);
+
+  --v-warning: #DDB935;   /* Sombras · creme −37,5% — ocre OFICIAL, ~9,4:1 ✓ */
+  --v-warningBg: rgba(221, 185, 53, 0.11);
+  --v-warningBg2: rgba(221, 185, 53, 0.16);
+  --v-warningBg3: rgba(221, 185, 53, 0.24);
+
+  --v-negative: #E0917D;  /* ⚠️ DERIVAÇÃO: a rampa de Saturação do cinza vira tijolo
+                             (`755757`…`750000`), mas só para o lado ESCURO — não há tijolo
+                             claro publicado. Reusa o valor que `ui-portal` já aplicava */
+  --v-negativeBg: rgba(224, 145, 125, 0.1);
+  --v-negativeBg2: rgba(224, 145, 125, 0.15);
+  --v-negativeBg3: rgba(224, 145, 125, 0.2);
+  --v-negativeBg4: rgba(224, 145, 125, 0.26);
+
+  --v-danger: #EDA492;    /* um degrau acima de `negative` — no escuro "mais grave" é mais
+                             claro, não mais escuro: escurecer aqui SUMIRIA com o alerta */
+  --v-dangerBg: rgba(237, 164, 146, 0.14);
+
+  /* ── Institucional / séries de gráfico ───────────────────────────────────── */
+  --v-verde: #8FBFA8;
+  --v-blue: #7DA2AA;
+  --v-purple: #A79BB8;    /* ⚠️ DERIVAÇÃO: série alternativa, sem roxo na paleta */
+  --v-coral: #E0917D;
+
+  /* ── Superfícies sutis / overlays ─────────────────────────────────────────
+     Invertem a base: no claro é ink com alfa; aqui é off-white com alfa. */
+  --v-hoverBg: rgba(255, 253, 245, 0.04);
+  --v-subtleBg: rgba(255, 253, 245, 0.06);
+  --v-overlay: rgba(4, 6, 6, 0.66);   /* Sombras · ink −75% */
+  --v-overlay2: rgba(4, 6, 6, 0.45);
+
+  /* ── Superfície invertida ─────────────────────────────────────────────────
+     ⚠️ Aqui ela SOBE em vez de afundar. Em ink, a faixa de KPIs da home encostaria na
+     página e o destaque sumiria — em silêncio, que é o pior modo de sumir. Texto off-white
+     e acento creme continuam iguais: é a linha que a grade de contraste aprova nos dois. */
+  --v-invAccentBg: #425F66; /* Sombras · petróleo −25% — DESCE, porque aqui ele é fundo e
+                               não tinta: o `--v-accent` subiu para virar texto legível, e
+                               preencher um bloco com aquele tom deixaria off-white a ~2:1 */
+  --v-invAccentGrad1: #2C4044; /* Sombras · petróleo −50% */
+  --v-invAccentGrad2: #425F66; /* Sombras · petróleo −25% */
+  --v-invBg: #28363B;     /* Sombras · ink +12,5% */
+  --v-invBg2: #40575E;    /* Sombras · ink +25% */
+  --v-invText: #FFFDF5;
+  --v-invText3: rgba(255, 253, 245, 0.6);
+  --v-invAccent: #F5EAC4;
+  --v-invPositive: #8FBFA8;
+  --v-invNegative: #E0917D;
+
+  /* ⚠️ No escuro a sombra quase não existe: quem eleva é a borda clara, não o preto por
+     baixo — preto sobre preto não desenha degrau nenhum. */
+  --v-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+
+  --vesso-bg: var(--v-bg);
+  --vesso-surface: var(--v-card);
+  --vesso-text: var(--v-text);
+  --vesso-border: var(--v-border);
+  --v-fix-bg: var(--v-card);
+  /* ⚠️ Mais discreta que no claro: ali é ink 16% sobre papel; aqui, off-white sobre ink, a
+     mesma opacidade vira uma listra luminosa ao lado da tabela. */
+  --v-scrollbar: rgba(255, 253, 245, 0.11);
+  --v-scrollbarHover: rgba(255, 253, 245, 0.2);
+
+  /* ⚠️ Diz ao NAVEGADOR que a página é escura. Sem isto, o campo de formulário, o menu
+     nativo do `<select>`, o autofill e a barra de rolagem padrão continuam claros — a
+     tela fica escura com buracos brancos que nenhum CSS do app alcança. */
+  color-scheme: dark;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   FRAME E DENSIDADE — o tamanho do app.
+
+   ⚠️ **O FRAME É VARIÁVEL PORQUE INLINE NÃO FAZ MEDIA QUERY.** `LARGURA` era 1104 em
+   `Shell.tsx` e em `loading.tsx`, cravado como `maxWidth`. Medido, em 1920px o app ocupava
+   **57% da tela, com 816px vazios** — e um bloco estreito no meio de um monitor grande
+   reforça a sensação de miniatura que motivou esta mudança.
+
+   Acima de 1440px o frame vai a 1400. ⚠️ Não vira "largura total": as tabelas do app foram
+   calibradas para ~1040 úteis, e linha de tabela muito longa faz o olho perder a linha entre
+   a primeira coluna e a última. 1400 é o teto que ganha ~3 meses na Progressão sem passar
+   disso.
+
+   ⚠️ `max-width` NUNCA causa overflow — ele limita, não força. Então o frame largo é seguro
+   mesmo quando a densidade encolhe a largura de layout do `body` (ver abaixo): o container
+   simplesmente para de crescer antes.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+:root { --v-frame: 1104px; }
+
+@media (min-width: 1441px) {
+  :root { --v-frame: 1400px; }
+}
+
+/* ⚠️ `zoom` no `body`, não `font-size` no `:root`: o app tem 1.248 `fontSize` INLINE, todos
+   em px e nenhum em `rem` — mudar a raiz não moveria nada. `zoom` escala o layout inteiro,
+   como o Ctrl+ do navegador. Ver `lib/densidade.ts` para a medição que motivou isto.
+
+   ⚠️ No `body` e não no `html`: no `html` o Safari aplica o zoom também à barra de rolagem
+   da janela e à área de `position: fixed` do viewport. */
+[data-densidade='confortavel'] body { zoom: 1.15; }
+[data-densidade='amplo'] body { zoom: 1.3; }
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  min-height: 100%;
+  background: var(--vesso-bg);
+  color: var(--vesso-text);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  /* Figuras tabulares em todo o app — alinha colunas de números sem fonte mono. */
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--v-scrollbar);
+  border-radius: 6px;
+  border: 2px solid var(--vesso-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--v-scrollbarHover);
+}
+
+/*
+ * ⚠️ CONTROLES NÃO HERDAM FONTE. É regra do user-agent, não descuido do navegador:
+ * <button>, <input>, <select> e <textarea> nascem com a fonte de UI do sistema (San
+ * Francisco no macOS, Segoe no Windows) em vez da fonte da página.
+ *
+ * O app tem ~1.000 <button> e só uma dúzia declarava `fontFamily: 'inherit'` inline — ou
+ * seja, quase todo rótulo de botão, campo de busca e select saía na fonte errada, ao lado
+ * de textos em Public Sans. Era a causa do "as fontes não batem" que aparecia em telas
+ * inteiras sem haver nada de errado no estilo declarado.
+ *
+ * Só `font-family`: tamanho e peso continuam vindo do estilo inline de cada controle, e
+ * herdar `font-size` mudaria em massa quem depende do default de 13,33px do user-agent.
+ */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/*
+ * LOGIN — split ink | papel.
+ *
+ * As duas metades existem só nesta tela, então as regras que dependem de largura moram aqui
+ * (o app é todo estilo inline, e inline não faz media query). Abaixo de 860px a coluna de
+ * marca vira uma FAIXA no topo: some a frase, o elemento de apoio e o rodapé, e fica só o
+ * wordmark — a marca continua presente sem comer a altura que o formulário precisa no
+ * celular, onde o teclado já toma metade da tela.
+ */
+@media (max-width: 860px) {
+  .login-split {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto 1fr !important;
+    min-height: 100dvh;
+  }
+  .login-marca {
+    padding: 22px 24px !important;
+    gap: 0 !important;
+  }
+  .login-marca img {
+    height: 24px !important;
+  }
+  .login-marca-frase,
+  .login-marca-apoio,
+  .login-marca-rodape {
+    display: none !important;
+  }
+}
+
+/* Foco do campo: fio em petróleo + halo. O acento da marca aparece como COR DO FIO, não
+   como preenchimento — o campo segue sendo papel. */
+.login-campo:focus {
+  border-color: var(--v-accent);
+  box-shadow: 0 0 0 3px var(--v-accentBg3);
+}
+
+/* ⚠️ O campo é transparente (regra do app: controle vive na camada do papel), e o autofill
+   do Chrome pinta um azul-claro próprio por cima — numa tela de login isso acontece SEMPRE,
+   já que o navegador preenche e-mail e senha de saída. O inset repõe o off-white da marca. */
+.login-campo:-webkit-autofill,
+.login-campo:-webkit-autofill:hover,
+.login-campo:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--v-bg) inset;
+  -webkit-text-fill-color: var(--v-text);
+  caret-color: var(--v-text);
+}
+
+/* Barra fina de "carregando" no topo, enquanto a navegação está pendente.
+   ⚠️ Mora aqui e não inline porque o app é todo estilo inline, e inline não faz keyframes. */
+@keyframes vesso-carregando {
+  0%   { background-position: -40% 0; }
+  100% { background-position: 140% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Sem varredura para quem pediu menos movimento — a barra fica parada, mas presente. */
+  @keyframes vesso-carregando { 0%, 100% { background-position: 50% 0; } }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   CAMADA RESPONSIVA — o único lugar do app onde largura de tela decide algo.
+
+   ⚠️ O app é todo estilo INLINE, e inline não faz media query. Sem esta camada, a
+   única saída seria medir a janela em JavaScript — que no App Router significa
+   renderizar o desktop no servidor e trocar depois da hidratação: um pulo visível
+   em toda navegação, e tela errada enquanto o JS não chega.
+
+   Então a regra é: quem depende de largura vira CLASSE aqui; o resto continua inline.
+
+   BREAKPOINT ÚNICO: 720px. Não é gosto — é onde a fileira de 3 painéis da home
+   (3×300 + calhas = 988) deixa de caber com folga em qualquer arranjo. Um segundo
+   breakpoint só se paga quando alguma tela precisar de um estado intermediário de
+   verdade; até lá, dois estados são dois estados para conferir, não quatro.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Quadro que rola de lado. Vale em QUALQUER largura — é o contêiner das tabelas
+   densas, e no desktop o Conteúdos (1060) já passava dos 1040 úteis do frame.
+   `overscroll-behavior-x: contain` impede que arrastar a tabela até o fim vire o
+   gesto de "voltar" do navegador, que é como se perde o lugar sem querer. */
+.v-scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 720px) {
+  /* Frame: 32px de folga de cada lado comem 64 dos 375 de um celular — 17% da tela
+     gasta em margem. 16 mantém o respiro sem estreitar a coluna de leitura. */
+  .v-frame { padding-left: 16px !important; padding-right: 16px !important; }
+
+  /* O respiro de 88px sob o header existe para a página "começar depois" da barra
+     num monitor. Num celular ele é uma tela inteira de nada antes do conteúdo. */
+  .v-main { padding-top: 24px !important; padding-bottom: 56px !important; }
+
+  /* Grades: viram coluna única. `v-stack-2` mantém duas onde o par é comparação
+     (antes/depois, meta/realizado) e uma coluna quebraria a leitura. */
+  /* ⚠️ `minmax(0, 1fr)`, NUNCA `1fr`. São coisas diferentes: `1fr` é
+     `minmax(auto, 1fr)`, e esse `auto` respeita a largura MÍNIMA DO CONTEÚDO —
+     uma linha com `white-space: nowrap` obriga a coluna a caber o texto inteiro.
+
+     Medido em 440px com o bloco "Na Trilha": com `1fr` o cartão fica com **753px**
+     dentro de uma coluna de 408 e empurra a PÁGINA TODA para 755 de largura; a
+     pessoa arrasta de lado e o app inteiro anda junto. Com `minmax(0, 1fr)` a
+     coluna pode encolher, o `overflow: hidden` do título finalmente corta e o
+     documento volta a caber.
+
+     No desktop isto nunca apareceu porque a grade original é
+     `repeat(auto-fit, minmax(260px, 1fr))` — mínimo FIXO de 260, nunca
+     `auto`. Trocar por `1fr` foi justamente o que introduziu o defeito.
+
+     É a mesma armadilha que o VisaoCarteiraClient já documenta na fileira dos
+     três painéis. */
+  .v-stack { grid-template-columns: minmax(0, 1fr) !important; }
+  .v-stack-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
+
+  /* Controle que no desktop divide a linha e no celular ocupa a largura toda —
+     alvo de toque decente sem depender de mira. */
+  .v-full { width: 100% !important; }
+
+  /* Respiro: o app foi desenhado com a página inteira à vista, onde 96px entre
+     seções é o off-white da marca fazendo pausa. No celular a mesma pausa é uma
+     tela de nada — a pessoa rola achando que o conteúdo acabou. Os valores caem
+     pela metade, não a zero: sem intervalo as seções colam e viram uma só. */
+  .v-gap-lg { gap: 36px !important; }
+  .v-gap-md { gap: 20px !important; }
+  .v-mt-lg { margin-top: 40px !important; }
+
+  /* Manchete de tela (PageHero, ficha do cliente): 38–40px foram calibrados num
+     frame de 1040. Em 343px um nome como "Dra. Daiana Condessa Dode" quebra em três
+     linhas e o título come a primeira tela sozinho. 28 mantém o posto de manchete
+     — continua sendo o maior corpo da página — sem virar parágrafo. */
+  .v-manchete { font-size: 28px !important; line-height: 1.12 !important; }
+
+  /* ⚠️ O header mede 74px no desktop e ~56 no celular. Todo `position: sticky`
+     do app foi calibrado com `ALTURA_HEADER` (74) — no celular isso deixa um vão
+     de 18px em que o conteúdo rola VISÍVEL entre a barra e o elemento fixo. É o
+     mesmo defeito que os `top: 104` do cabeçalho de duas barras produziram. */
+  .v-sticky-h { top: 60px !important; }
+
+  /* Coluna de apoio que no desktop acompanha a rolagem numa calha própria. No
+     celular ela vira uma faixa empilhada abaixo do conteúdo: `sticky` com altura
+     máxima ali criaria uma segunda área de rolagem dentro da página, e duas
+     rolagens verticais no toque é como se perde o gesto. */
+  .v-unstick {
+    position: static !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Variante de DUAS colunas fixas — para as tabelas cujo nome do cliente é a
+     SEGUNDA coluna (Status vem antes, em Google Ads · Visão geral e no Aquário).
+     Congelar só a primeira ali prenderia um chip de status na borda e deixaria o
+     nome rolar para fora — pior que não congelar nada.
+     ⚠️ O `left` da segunda coluna é a largura da primeira, que vem do `<colgroup>`
+     de cada tabela. Mexeu no `<col>`, mexa aqui. */
+  .v-tab-fix2 tr { background: var(--v-fix-bg); }
+  .v-tab-fix2 th:first-child,
+  .v-tab-fix2 td:first-child,
+  .v-tab-fix2 th:nth-child(2),
+  .v-tab-fix2 td:nth-child(2) {
+    position: sticky;
+    z-index: 2;
+    background: inherit;
+  }
+  .v-tab-fix2 th:first-child,
+  .v-tab-fix2 td:first-child { left: 0; }
+  .v-tab-fix2-74 th:nth-child(2),
+  .v-tab-fix2-74 td:nth-child(2) { left: 74px; }
+  .v-tab-fix2-88 th:nth-child(2),
+  .v-tab-fix2-88 td:nth-child(2) { left: 88px; }
+
+  /* ─── Lista em GRADE com a coluna do nome congelada ────────────────────────
+     Irmã da `.v-tab-fix`, para as listas que NÃO são `<table>`: na home, "Por
+     avaliação" e "C.S. · Não" são grades de `<div>`/`<Link>`, então o seletor de
+     `<td>` não as alcança.
+
+     A regra é a mesma e o motivo também: rolar duas colunas para a direita já
+     deixa a linha anônima, e número sem dono não é dado — é ruído. Congela o
+     PRIMEIRO filho de cada linha (cabeçalho e linhas são filhos diretos do
+     contêiner que leva a classe).
+
+     ⚠️ Fundo OPACO e `padding-right`: as linhas são transparentes (`TABELA` é
+     "fio sobre papel"), e sem os dois o conteúdo que rola passa por baixo do nome
+     e encosta nele. */
+  .v-lista-fix > * > :first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--v-fix-bg);
+    padding-right: 10px;
+  }
+
+  /* ─── Tarefas: a linha perde DUAS colunas, não ganha rolagem ───────────────
+     ⚠️ Aqui a rolagem horizontal (o padrão das outras tabelas) NÃO serve: a linha
+     é toda editável por dropdown — status, responsável, prazo e prioridade abrem
+     painel absoluto. `overflow-x: auto` cria contexto de recorte e CORTA esses
+     painéis, que é exatamente o defeito já documentado na nav do Shell.
+
+     Então a régua é editorial: some o CHIP de status (o círculo colorido à
+     esquerda já diz o mesmo, e é ele que abre o seletor) e some o RÓTULO de
+     prioridade (que em `normal` — a maioria — nem texto tem). O que fica é o que
+     não se deduz de nada: título, de quem é, de qual cliente e para quando. */
+  .v-row-tarefa {
+    /* Colunas fixas apertadas ao mínimo legível para devolver largura ao título:
+       avatar 30→26, cliente 88→74, prazo 62→58. Sobram ~157px para o nome, contra
+       ~135 antes. */
+    grid-template-columns: 18px 20px minmax(0, 1fr) 26px 74px 58px !important;
+    gap: 7px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .v-row-tarefa > .v-col-opc { display: none !important; }
+
+  /* ⚠️ O título QUEBRA em vez de cortar com reticências.
+     No desktop a linha tem ~370px e o corte com "…" perde uma palavra no fim —
+     tolerável. Em 157px ele corta na quarta ou quinta palavra e "Revisão e evol…"
+     não distingue duas tarefas que começam igual: a lista vira uma coluna de
+     prefixos. Uma linha mais alta custa rolagem; um nome cortado custa a tarefa.
+     `align-items: start` no lugar de `center` para que, com o título em duas
+     linhas, o resto da linha não flutue no meio. */
+  .v-row-tarefa { align-items: start !important; }
+  /* Só aqui os adornos (progresso do checklist, ↻, alfinete) descem para a linha
+     seguinte. No desktop o título cabe numa linha e eles continuam centrados. */
+  .v-tarefa-linha {
+    align-items: flex-start !important;
+    flex-wrap: wrap !important;
+  }
+  .v-tarefa-titulo {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Calendário semanal: 7 colunas em 343px dariam ~40px por dia — cabe o número
+     e mais nada. Rola de lado com a semana inteira preservada, que é o que o
+     cabeçalho da tela promete ("N tarefas na semana"). */
+  .v-cal-semana { min-width: 760px; }
+
+  /* Tabela densa: a primeira coluna (quase sempre o nome do cliente) congela à
+     esquerda enquanto o resto rola. Sem isso, arrastar duas colunas para a direita
+     já deixa a linha anônima — números sem dono.
+
+     ⚠️ Precisa de fundo OPACO: as tabelas do app são `background: transparent`
+     (ESTILO_TABELA — "fio sobre papel"), e coluna sticky transparente deixa o
+     conteúdo que rola passar por baixo. Quem está sobre cartão define
+     `--v-fix-bg` no estilo inline; o resto herda o off-white da página. */
+  .v-tab-fix tr { background: var(--v-fix-bg); }
+  .v-tab-fix th:first-child,
+  .v-tab-fix td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    /* ⚠️ `inherit` e não uma cor fixa: a célula pega o fundo COMPUTADO da própria
+       `<tr>`. As tabelas do app pintam a linha inline (destaque, seleção, alerta,
+       zebra) e estilo inline vence a classe — então a linha continua mandando na
+       própria cor e a célula fixa acompanha. Uma cor fixa aqui deixaria a coluna
+       do nome fora do tom em toda linha destacada.
+       O padrão do `--v-fix-bg` é o tom do CARTÃO, que é onde quase toda tabela do
+       app vive; quem estiver direto sobre a página passa `--v-fix-bg` no inline. */
+    background: inherit;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   NAV — hambúrguer abaixo de 720px.
+
+   A barra tem ~9 rótulos em caixa-alta com `flex-wrap: nowrap`, somando ~950px.
+   Num celular ela não "aperta": ela empurra a página inteira para além da janela,
+   e o app todo passa a rolar de lado — inclusive as telas que caberiam.
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  /* ⚠️ DUAS colunas, não três com uma vazia. `display:none` TIRA o elemento do
+     fluxo do grid — a nav não deixa célula vazia no meio, ela some, e a conta
+     escorregaria para a coluna do centro. Com `auto 1fr` sobram exatamente os dois
+     filhos visíveis: logo à esquerda, conta (hambúrguer + foto) à direita. */
+  .v-nav-desktop { display: none !important; }
+  .v-header-grid { grid-template-columns: auto 1fr !important; gap: 12px !important; min-height: 56px; }
+}
+@media (min-width: 721px) {
+  .v-nav-mobile { display: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   CAMADA FINANCEIRA (--f-*) — docs/PROMPT.md §6. Só aponta para tokens da Vesso, exceto 5
+   tons de texto escurecidos DENTRO das mesmas famílias, por contraste medido no tema claro
+   (text4 2,57:1 · petróleo como texto 4,29:1 · ocre 3,13:1 · text3 sobre o painel 4,43:1).
+   ⚠️ Direção do dinheiro é dada pelo SINAL, nunca pela cor. Verde/tijolo só falam de
+      variação contra meta e de estado. `text4` não aparece no Vesso FIN.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+:root {
+  --f-accentText:   #476870;  /* petróleo p/ link/aba ativa — 5,9:1 */
+  --f-positiveText: #3F6556;  /* 6,4:1 */
+  --f-warningText:  #7A5E1C;  /* 6,0:1 */
+  --f-negativeText: #A0503F;  /* 5,5:1 */
+  --f-mutedText:    #5A6265;  /* substitui text3 em linha de tabela — 6,1:1 */
+}
+[data-theme='dark'] {
+  --f-accentText: var(--v-accent);  --f-positiveText: var(--v-positive);
+  --f-warningText: var(--v-warning); --f-negativeText: var(--v-negative);
+  --f-mutedText: var(--v-text3);
+}
+:root, [data-theme='dark'] {
+  --f-money: var(--v-text);
+  --f-conc-ok-text: var(--v-text2);   --f-conc-ok-icon: var(--f-positiveText);
+  --f-conc-pend-text: var(--v-text);  --f-conc-pend-icon: var(--v-text2);
+  --f-conc-div-text: var(--v-text);   --f-conc-div-bar: var(--v-negative);
+  --f-conc-div-bg: var(--v-negativeBg); --f-conc-div-delta: var(--f-negativeText);
+  --f-conc-ign-text: var(--f-mutedText);
+  --f-due-today: var(--f-warningText);  --f-due-late: var(--f-negativeText);
+  --f-var-fav: var(--f-positiveText);   --f-var-desfav: var(--f-negativeText);
+  --f-row-selected: var(--v-realceBg2); --f-focus-ring: 0 0 0 2px var(--v-accent);
+  --f-row-op: 24px; --f-row-op-dense: 20px; --f-row-portal: 44px;
+  --f-th-size: 10px; --f-num-col: 14ch;
+}
+
+/* Linha de operação: 24px / 12px. A densa (20px) é opção por pessoa e NUNCA no Fechamento. */
+.f-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
+.f-tabela th {
+  height: 22px; padding: 0 8px; font-size: var(--f-th-size); font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--f-mutedText); background: var(--v-surface2); text-align: left;
+  white-space: nowrap; position: sticky; top: 0; z-index: 1;
+}
+.f-tabela td { height: var(--f-row-op); padding: 0 8px; border-bottom: 1px solid var(--v-borderFaint); white-space: nowrap; }
+.f-tabela.f-densa td { height: var(--f-row-op-dense); }
+.f-tabela .f-num, .f-tabela th.f-num { text-align: right; width: var(--f-num-col); font-variant-numeric: tabular-nums; color: var(--f-money); }
+.f-tabela tr[data-foco='1'] td { background: var(--f-row-selected); }
+.f-tabela tr[data-foco='1'] td:first-child { box-shadow: inset 2px 0 0 var(--v-accent); }
+.f-tabela tr:focus-visible { outline: none; }
+.f-tabela tr:focus-visible td { box-shadow: inset 0 0 0 1px var(--v-accent); }
+
+/* Os 4 estados — sempre ícone + texto + (cor), legíveis em escala de cinza. */
+.f-st-conciliado td { color: var(--f-conc-ok-text); }
+.f-st-pendente td { color: var(--f-conc-pend-text); font-weight: 500; }
+.f-st-divergente td { color: var(--f-conc-div-text); background: var(--f-conc-div-bg); }
+.f-st-divergente td:first-child { box-shadow: inset 3px 0 0 var(--f-conc-div-bar); }
+.f-st-ignorado td { color: var(--f-conc-ign-text); font-style: italic; }
+.f-ic-ok { color: var(--f-conc-ok-icon); }
+.f-ic-pend { color: var(--f-conc-pend-icon); }
+.f-ic-div { color: var(--f-conc-div-bar); }
+.f-delta { color: var(--f-conc-div-delta); font-variant-numeric: tabular-nums; font-style: normal; }
+.f-link { color: var(--f-accentText); }
+
+kbd.f-kbd {
+  font-family: var(--font-sans), system-ui, sans-serif; font-size: 10px; font-weight: 600;
+  padding: 0 4px; min-width: 16px; display: inline-block; text-align: center; line-height: 16px;
+  border: 1px solid var(--v-border2); border-bottom-width: 2px; border-radius: 3px; color: var(--v-text2);
+  background: var(--v-surface);
+}
+
+/* O logo é ink (#111719): no escuro some. Invertido vira quase off-white, dentro da marca. */
+[data-theme='dark'] .f-logo { filter: invert(1); }

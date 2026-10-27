@@ -28,3 +28,22 @@ O teste foi validado em Postgres 16; produção é Postgres 17 — por isso o pa
 - 0001_bpo_fin_nucleo.sql ............ 6a118284810ceab2
 - 0002_bpo_fin_importa_historico_seis . c26747454142eeda
 - test/10_testes_nucleo.sql .......... 945d0a56157b86b6
+
+## Código (pnpm, Node ≥ 22)
+
+```bash
+pnpm install
+pnpm test:db     # banco: núcleo (43) + importação (nao_explicado = 0) + 0004 + 0005, cada um num banco novo ICU
+pnpm test        # unitários (fmtBRL, hash contra vetores de produção)
+pnpm test:sql    # hash TS × bpo_fin.fn_hash_natural: banco novo com ICU (como produção), 2.000 linhas aleatórias
+pnpm test:api    # API e worker × Postgres local: banco novo, conecta como vesso_fin_api / vesso_fin_worker
+pnpm typecheck
+```
+
+API local: `cp apps/api/.env.example apps/api/.env`, ajustar e `pnpm --filter @vesso-fin/api dev`.
+Worker local: `DATABASE_URL_WORKER=… pnpm --filter @vesso-fin/api worker` (processa a fila `bpo_fin.fila_jobs`: `processar_extrato` (OFX) e `sync_asaas`).
+Web local: `cp apps/web/.env.example apps/web/.env.local`, ajustar e `pnpm --filter @vesso-fin/web dev` (porta 3300).
+
+Ponta a ponta sem tocar no Supabase: `pnpm --filter @vesso-fin/api exec tsx scripts/auth-falso.ts` sobe um Auth falso
+(JWKS + login, ES256) em :9999 com os usuários do seed (`analista@x`, `revisor@x`, `head@x`, `dono@x`,
+`gestor_trafego@x`, senha `senha`). Aponte `SUPABASE_URL=http://localhost:9999` na API e no web.

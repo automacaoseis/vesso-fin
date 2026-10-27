@@ -1,0 +1,11 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @vesso-fin/api build",
+    "watchPatterns": ["apps/api/**", "packages/shared/**", "pnpm-lock.yaml"]
+  },
+  "deploy": {
+    "startCommand": "pnpm --filter @vesso-fin/api worker",
+    "restartPolicyType": "ALWAYS"
+  }
+}

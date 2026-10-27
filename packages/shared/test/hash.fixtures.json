@@ -1,0 +1,15 @@
+{
+  "_origem": "bpo_fin.fn_hash_natural em produção (gzdvkqzliyupiuyaqkpj, PG 17.6, ICU en-US), 23/10/2026. Não editar à mão.",
+  "vetores": [
+    { "id_conta": "00000000-0000-0000-0000-000000000001", "data": "2026-10-01", "valor": "-50", "descricao": "  pix   teste ", "seq": 0, "hash": "7fce8b012c186feb30c5c55b5a80e57e3468f10762833ec3a157e499efb85974" },
+    { "id_conta": "3F2504E0-4F89-11D3-9A0C-0305E82C3301", "data": "2026-01-31", "valor": "1.005", "descricao": "PIX RECEBIDO - João da Silva", "seq": 0, "hash": "bfefda5f82c332c12993098665d904325298889427f8b2e4d675cb092e683634" },
+    { "id_conta": "3f2504e0-4f89-11d3-9a0c-0305e82c3301", "data": "2026-01-31", "valor": "-1.005", "descricao": "\tTARIFA\tPACOTE ", "seq": 2, "hash": "4db487dc8fafb41d18be092281fd085e9e21232bb03cac667b696ef06d9c0c9a" },
+    { "id_conta": "3f2504e0-4f89-11d3-9a0c-0305e82c3301", "data": "2024-02-29", "valor": "-0.004", "descricao": "arredonda pra zero", "seq": 0, "hash": "f57f4f5a74cb3b40aa434a2b339a6ebf66088b0e0e8064fd57dfa72ccf1cb2a2" },
+    { "id_conta": "3f2504e0-4f89-11d3-9a0c-0305e82c3301", "data": "2025-12-31", "valor": "0", "descricao": "", "seq": 0, "hash": "1d8cb90120929b7e1fea4588ad94e41905170ed8c67b45ad79980562887d5031" },
+    { "id_conta": "3f2504e0-4f89-11d3-9a0c-0305e82c3301", "data": "2025-12-31", "valor": "2.675", "descricao": null, "seq": 1, "hash": "4a4bc4d1d4e52540447622670dd9dacaf7ba7ff44ddf0f72122f698ae451344b" },
+    { "id_conta": "3f2504e0-4f89-11d3-9a0c-0305e82c3301", "data": "2025-06-15", "valor": "123456789.995", "descricao": "pag boleto\u0085straße ﬁm", "seq": 0, "hash": "44affde3b6d8d7ea45f2482e5b613fca0352a390ea32a61ee78364cdef6e5448" },
+    { "id_conta": "3f2504e0-4f89-11d3-9a0c-0305e82c3301", "data": "2025-06-15", "valor": "-999999999999.99", "descricao": "zero​width﻿bom\u001fus", "seq": 10, "hash": "ca518bc49190c236179b2d71956a738f538aa443aa4545e01acf01f170abdc7c" },
+    { "id_conta": "3f2504e0-4f89-11d3-9a0c-0305e82c3301", "data": "2025-06-15", "valor": "-12.9", "descricao": " a\r\n b 　", "seq": 0, "hash": "4f5dbeeb8b4c4ab8fbd7a004a887abba23b69c4e4d0592f5d918f9c1f9b24769" },
+    { "id_conta": "3f2504e0-4f89-11d3-9a0c-0305e82c3301", "data": "2025-06-15", "valor": "4500", "descricao": "Açaí ǆ µ ı", "seq": 0, "hash": "e0fabd472c156f8504e58f983c082c2c0b9cc9576b48f6c0c6833cd6243ba73b" }
+  ]
+}
