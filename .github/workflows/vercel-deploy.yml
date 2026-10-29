@@ -1,0 +1,21 @@
+# Publica o apps/web na Vercel a cada push na main que mexa no site.
+# Por que não a integração direta do GitHub: no plano Hobby a Vercel BLOQUEIA deploy cujo autor do commit
+# não é o dono da conta (automacoesseisemarketing) — e os commits saem pela conta pessoal do GitHub.
+# O Deploy Hook é disparado pelo próprio projeto e não passa por essa checagem.
+# A URL do gancho fica no segredo VERCEL_DEPLOY_HOOK (Settings → Secrets → Actions). NUNCA no código: o repo é público.
+name: Deploy Vercel (web)
+on:
+  push:
+    branches: [main]
+    paths: ['apps/web/**', 'packages/shared/**', 'pnpm-lock.yaml', '.github/workflows/vercel-deploy.yml']
+  workflow_dispatch: {}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disparar o Deploy Hook
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "::error::segredo VERCEL_DEPLOY_HOOK não cadastrado"; exit 1; fi
+          curl -sf -X POST "$HOOK"
