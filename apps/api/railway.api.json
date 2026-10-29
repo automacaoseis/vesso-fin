@@ -2,10 +2,14 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @vesso-fin/api build",
-    "watchPatterns": ["apps/api/**", "packages/shared/**", "pnpm-lock.yaml"]
+    "watchPatterns": [
+      "apps/api/**",
+      "packages/shared/**",
+      "pnpm-lock.yaml"
+    ]
   },
   "deploy": {
-    "startCommand": "pnpm --filter @vesso-fin/api start",
+    "startCommand": "node --enable-source-maps apps/api/dist/server.js",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",

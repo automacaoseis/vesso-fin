@@ -22,9 +22,13 @@ Railway e Vercel puxam do GitHub. Criar o repositório privado `vesso-fin` e dar
 | | Serviço `api` | Serviço `worker` |
 |---|---|---|
 | Config file | `apps/api/railway.api.json` | `apps/api/railway.worker.json` |
+| Start command | `node --enable-source-maps apps/api/dist/server.js` | `node --enable-source-maps apps/api/dist/worker.js` |
 | Domínio público | sim (gera a URL da API) | **não** |
 | Variáveis | `DATABASE_URL` (login api), `DATABASE_CA`, `SUPABASE_URL`, `VESSO_SERVICE_SECRET` | `DATABASE_URL_WORKER` (login worker), `DATABASE_CA`, `INTERVALO_MS=2000` |
 
+- Start com `node` direto (sem `pnpm` no runtime: o bundle já tem as dependências dentro).
+- Root Directory vazio (o build precisa do monorepo inteiro). Região US East.
+- Host do pooler: **aws-1-us-east-1.pooler.supabase.com** (o `db.<ref>.supabase.co` é só IPv6; a Railway não sai por IPv6).
 - `SUPABASE_URL=https://gzdvkqzliyupiuyaqkpj.supabase.co` (só para JWKS/issuer).
 - `VESSO_SERVICE_SECRET`: gerar com `openssl rand -hex 32`. O MESMO valor vai para a Vercel.
 - Conferir: `curl https://<url-da-api>/health` → `ok`; `curl https://<url-da-api>/orgs` → 401 "sem assinatura de serviço".
