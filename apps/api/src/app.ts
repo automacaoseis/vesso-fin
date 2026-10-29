@@ -420,6 +420,11 @@ export function criarApp(deps: Deps) {
   })
 
   // ─── fechamento ──────────────────────────────────────────────────────────────────
+  // Meses com fechamento iniciado (a tela mostra os demais como "aberto").
+  app.get('/orgs/:id/fechamentos', async (c) => c.json(await ler(c, (q) => q(
+    `select competencia, status, executor, enviado_revisao_em, revisor, revisado_em, liberado_por, liberado_em, reaberturas
+       from bpo_fin.fechamento_mensal where id_org = $1 order by competencia desc limit 36`, [param(c, 'id')]))))
+
   app.get('/orgs/:id/fechamentos/:competencia', async (c) => {
     const id = param(c, 'id')
     const comp = competencia(c)

@@ -280,6 +280,10 @@ describe.skipIf(!url)('API × banco', () => {
       expect(r.status).toBe(422)
       expect(r.json.mensagem).toMatch(/divergentes|saldo/)
     })
+    it('lista de fechamentos da org (vazia no início)', async () => {
+      expect((await get(`/orgs/${ORG.b}/fechamentos`, 'analista')).json).toEqual([])
+      expect((await get(`/orgs/${ORG.b}/fechamentos`, 'gestor')).json).toEqual([])
+    })
     it('competência fora do dia 1 → 422; ação desconhecida → 404', async () => {
       expect((await get(`/orgs/${ORG.b}/fechamentos/2026-09-15`, 'analista')).status).toBe(422)
       expect((await post(`/orgs/${ORG.b}/fechamentos/2026-09-01/apagar`, 'analista')).status).toBe(404)
