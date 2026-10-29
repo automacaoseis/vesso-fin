@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CATEGORIAS_IGNORADO, centavos, competenciaSugerida, fmtBRL } from '@vesso-fin/shared'
 import { theme } from '@/lib/theme'
+import { botaoPrimario, botaoSecundario, estiloCampo } from '@/components/vesso'
 import { f } from '@/lib/fin'
 import * as A from './acoes'
 import type { Baixa, Conta, Movimento, PlanoConta } from './tipos'
@@ -17,25 +18,24 @@ function Modal({ titulo, onFechar, children, largura = 520 }: { titulo: string; 
     <div role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onFechar()}
       style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(17,23,25,.45)', display: 'grid', placeItems: 'start center', paddingTop: '10vh' }}>
       <div role="dialog" aria-modal="true" aria-label={titulo}
-        style={{ width: `min(${largura}px, calc(100vw - 32px))`, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: theme.radius, boxShadow: '0 16px 48px rgba(17,23,25,.3)', padding: 18, display: 'grid', gap: 12 }}>
-        <div style={{ fontFamily: theme.display, fontSize: 19 }}>{titulo}</div>
+        style={{ width: `min(${largura}px, calc(100vw - 32px))`, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: theme.radius, boxShadow: '0 16px 48px rgba(17,23,25,.3)', padding: '22px 24px', display: 'grid', gap: 14 }}>
+        <div style={{ fontFamily: theme.display, fontSize: 24, fontWeight: 400, letterSpacing: '-0.01em', lineHeight: 1.2 }}>{titulo}</div>
         {children}
       </div>
     </div>
   )
 }
 
-const campo: React.CSSProperties = {
-  width: '100%', fontSize: 13, padding: '6px 8px', background: 'transparent', color: theme.text,
-  border: `1px solid ${theme.border2}`, borderRadius: theme.radiusSm, fontFamily: 'inherit',
-}
-const rotulo: React.CSSProperties = { fontSize: 11, color: theme.text2, display: 'grid', gap: 4 }
+// Campo, rótulo e botões = os do vesso-admin (components/vesso.tsx).
+const campo: React.CSSProperties = { ...estiloCampo, padding: '8px 11px' }
+const rotulo: React.CSSProperties = { display: 'grid', gap: 6, fontSize: 12.5, color: theme.text2 }
+// a caixa-alta vai SÓ no texto do rótulo — no <label> ela escorria para a busca e para a lista do plano de contas
+const rotuloTexto: React.CSSProperties = { fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: theme.text3 }
 function Botoes({ ocupado, ok, rotuloOk, onFechar }: { ocupado: boolean; ok: boolean; rotuloOk: string; onFechar: () => void }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-      <button type="button" onClick={onFechar} style={{ ...campo, width: 'auto', cursor: 'pointer' }}>Cancelar <kbd className="f-kbd">Esc</kbd></button>
-      <button type="submit" disabled={ocupado || !ok}
-        style={{ ...campo, width: 'auto', background: theme.text, color: theme.bg, border: 'none', fontWeight: 600, cursor: ok && !ocupado ? 'pointer' : 'default', opacity: ok ? 1 : 0.5 }}>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+      <button type="button" onClick={onFechar} style={botaoSecundario()}>Cancelar <kbd className="f-kbd">Esc</kbd></button>
+      <button type="submit" disabled={ocupado || !ok} style={botaoPrimario(ocupado || !ok)}>
         {ocupado ? 'Salvando…' : rotuloOk} <kbd className="f-kbd">↵</kbd>
       </button>
     </div>
@@ -43,7 +43,7 @@ function Botoes({ ocupado, ok, rotuloOk, onFechar }: { ocupado: boolean; ok: boo
 }
 function Resumo({ m }: { m: Movimento }) {
   return (
-    <div style={{ fontSize: 12, color: theme.text2, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+    <div style={{ fontSize: 12.5, color: theme.text2, display: 'flex', justifyContent: 'space-between', gap: 8, padding: '9px 12px', background: theme.surface2, borderRadius: theme.radiusSm }}>
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.data_movimento.split('-').reverse().join('/')} · {m.descricao_bruta}</span>
       <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>R$ {fmtBRL(m.valor)}</span>
     </div>
@@ -88,7 +88,7 @@ export function ModalLancar({ m, restante, plano, ocupado, onFechar, onConfirmar
       <Resumo m={m} />
       <form onSubmit={enviar} style={{ display: 'grid', gap: 10 }}>
         {!escolhido ? (
-          <label style={rotulo}>Plano de contas
+          <label style={rotulo}><span style={rotuloTexto}>Plano de contas</span>
             <input autoFocus value={q} placeholder="buscar por código ou nome" style={campo}
               onChange={(e) => { setQ(e.target.value); setIdx(0) }}
               onKeyDown={(e) => {
@@ -99,7 +99,7 @@ export function ModalLancar({ m, restante, plano, ocupado, onFechar, onConfirmar
             <div role="listbox" style={{ maxHeight: 260, overflowY: 'auto', border: `1px solid ${theme.borderFaint}`, borderRadius: theme.radiusSm }}>
               {lista.map((p, i) => (
                 <div key={p.id_plano_conta} role="option" aria-selected={i === idx} onMouseDown={() => setEscolhido(p)}
-                  style={{ padding: '4px 8px', fontSize: 12, cursor: 'pointer', background: i === idx ? f.rowSelected : 'transparent', display: 'flex', gap: 8 }}>
+                  style={{ padding: '4px 8px', fontSize: 12, cursor: 'pointer', background: i === idx ? theme.realceBg2 : 'transparent', display: 'flex', gap: 8 }}>
                   <span style={{ color: f.mutedText, fontVariantNumeric: 'tabular-nums', minWidth: 48 }}>{p.codigo}</span>
                   <span>{p.nome}</span>
                   {p.generica && <span style={{ color: f.warningText }}>· genérica</span>}
@@ -115,15 +115,15 @@ export function ModalLancar({ m, restante, plano, ocupado, onFechar, onConfirmar
                 {escolhido.generica && <span style={{ color: f.warningText }}> · genérica (o checklist vai cobrar)</span>}</span>
               <button type="button" onClick={() => setEscolhido(null)} className="f-link" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}>trocar</button>
             </div>
-            <label style={rotulo}>Descrição
+            <label style={rotulo}><span style={rotuloTexto}>Descrição</span>
               <input autoFocus value={descricao} onChange={(e) => setDescricao(e.target.value)} style={campo} maxLength={300} />
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <label style={rotulo}>Competência {sugerida && !compManual && <span style={{ color: f.mutedText }}>(pela regra: {sugerida.slice(5, 7)}/{sugerida.slice(0, 4)})</span>}
+              <label style={rotulo}><span><span style={rotuloTexto}>Competência</span> {sugerida && !compManual && <span style={{ color: f.mutedText }}>(pela regra: {sugerida.slice(5, 7)}/{sugerida.slice(0, 4)})</span>}</span>
                 <input type="month" value={compManual || (sugerida ? sugerida.slice(0, 7) : '')} required={!sugerida}
                   onChange={(e) => setCompManual(e.target.value)} style={campo} />
               </label>
-              <label style={rotulo}>Valor (R$)
+              <label style={rotulo}><span style={rotuloTexto}>Valor (R$)</span>
                 <input value={valorTxt} onChange={(e) => setValorTxt(e.target.value)} inputMode="decimal" style={{ ...campo, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} />
                 {!valorOk && <span style={{ color: f.negativeText }}>▲ entre 0,01 e {fmtBRL(restante)}</span>}
                 {valorOk && centavos(valor) < centavos(restante) && <span style={{ color: f.warningText }}>parcial: o movimento fica divergente</span>}
@@ -153,12 +153,12 @@ export function ModalIgnorar({ m, ocupado, onFechar, onConfirmar }: {
       <Resumo m={m} />
       <div style={{ fontSize: 12, color: f.warningText }}>Ignorar tira o dinheiro da conciliação. O motivo fica registrado.</div>
       <form onSubmit={(e) => { e.preventDefault(); if (n >= 10) onConfirmar({ categoria, motivo: motivo.trim() }) }} style={{ display: 'grid', gap: 10 }}>
-        <label style={rotulo}>Categoria
+        <label style={rotulo}><span style={rotuloTexto}>Categoria</span>
           <select value={categoria} onChange={(e) => setCategoria(e.target.value)} style={campo}>
             {CATEGORIAS_IGNORADO.map((c) => <option key={c} value={c}>{ROT_IGN[c]}</option>)}
           </select>
         </label>
-        <label style={rotulo}>Motivo <span style={{ color: n >= 10 ? f.mutedText : f.negativeText }}>({n}/10 mín.)</span>
+        <label style={rotulo}><span style={rotuloTexto}>Motivo</span><span style={{ color: n >= 10 ? f.mutedText : f.negativeText }}>({n}/10 mín.)</span>
           <textarea autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} maxLength={1000} style={campo}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (n >= 10) onConfirmar({ categoria, motivo: motivo.trim() }) } }} />
         </label>
@@ -203,7 +203,7 @@ export function ModalTransferir({ m, idOrg, contas, ocupado, onFechar, onConfirm
               style={{ border: `1px solid ${theme.borderFaint}`, borderRadius: theme.radiusSm, outline: 'none' }}>
               {cands.map((c, i) => (
                 <div key={c.id_movimento} role="option" aria-selected={i === sel} onMouseDown={() => setSel(i)}
-                  style={{ padding: '5px 8px', fontSize: 12, display: 'flex', gap: 10, cursor: 'pointer', background: i === sel ? f.rowSelected : 'transparent' }}>
+                  style={{ padding: '5px 8px', fontSize: 12, display: 'flex', gap: 10, cursor: 'pointer', background: i === sel ? theme.realceBg2 : 'transparent' }}>
                   <span style={{ fontVariantNumeric: 'tabular-nums' }}>{c.data_movimento.split('-').reverse().join('/')}</span>
                   <span style={{ minWidth: 90 }}>{nomeConta(c.id_conta)}</span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.descricao_bruta}</span>
@@ -248,7 +248,7 @@ export function ModalDesconciliar({ m, ocupado, onFechar, onConfirmar }: {
               <span style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtBRL(b.valor)}</span>
             </label>
           ))}
-        <label style={rotulo}>Motivo (mín. 5)
+        <label style={rotulo}><span style={rotuloTexto}>Motivo (mín. 5)</span>
           <input autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={1000} style={campo} />
         </label>
         <Botoes ocupado={ocupado} ok={ok} rotuloOk="Desconciliar" onFechar={onFechar} />
@@ -269,7 +269,7 @@ export function ModalMotivo({ titulo, m, minimo, rotuloOk, aviso, ocupado, onFec
       <Resumo m={m} />
       {aviso && <div style={{ fontSize: 12, color: theme.text2 }}>{aviso}</div>}
       <form onSubmit={(e) => { e.preventDefault(); if (n >= minimo) onConfirmar(motivo.trim()) }} style={{ display: 'grid', gap: 10 }}>
-        <label style={rotulo}>Motivo <span style={{ color: n >= minimo ? f.mutedText : f.negativeText }}>({n}/{minimo} mín.)</span>
+        <label style={rotulo}><span style={rotuloTexto}>Motivo</span><span style={{ color: n >= minimo ? f.mutedText : f.negativeText }}>({n}/{minimo} mín.)</span>
           <input autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={1000} style={campo} />
         </label>
         <Botoes ocupado={ocupado} ok={n >= minimo} rotuloOk={rotuloOk} onFechar={onFechar} />

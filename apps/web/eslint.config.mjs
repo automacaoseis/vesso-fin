@@ -24,7 +24,7 @@ const config = [
   ...coreWebVitals,
   ...typescript,
   semSupabase,
-  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts'] },
+  { ignores: ['.next/**', '.next-teste/**', 'node_modules/**', 'next-env.d.ts'] },
 ]
 
 export default config

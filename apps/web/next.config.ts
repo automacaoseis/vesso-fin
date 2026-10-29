@@ -7,6 +7,8 @@ if (proibidas.length) throw new Error(`variáveis proibidas no Vesso FIN: ${proi
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Pasta de build trocável: permite um 2º servidor de dev (ambiente de teste local) ao lado do principal.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   transpilePackages: ['@vesso-fin/shared'],
   // Upload de OFX passa por Server Action (o navegador só fala com este app): até 5 MB + folga.
   experimental: { serverActions: { bodySizeLimit: '6mb' } },

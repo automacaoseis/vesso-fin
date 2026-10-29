@@ -9,6 +9,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { alocar, centavos, fmtBRL, reais, type EstadoMovimento } from '@vesso-fin/shared'
 import { theme } from '@/lib/theme'
 import { f } from '@/lib/fin'
+import { botaoPrimario, estiloFiltro } from '@/components/vesso'
+import { Aviso, botaoSecundarioCompacto, campoCompacto, Painel } from '@/components/fin-ui'
 import type { Resultado } from '@/lib/api'
 import * as A from './acoes'
 import { ModalAjuda, ModalDesconciliar, ModalIgnorar, ModalLancar, ModalMotivo, ModalTransferir } from './Modais'
@@ -237,55 +239,58 @@ export default function ConciliacaoClient({ org, contas, plano, mes, filtros, in
   const total = Object.values(contagem).reduce((s, n) => s + (n ?? 0), 0)
 
   // ─── render ──────────────────────────────────────────────────────────────────────
-  const botao = (ativo = true): React.CSSProperties => ({
-    fontSize: 12, padding: '4px 10px', borderRadius: theme.radiusSm, fontFamily: 'inherit',
-    border: `1px solid ${theme.border2}`, background: 'transparent', color: ativo ? theme.text : f.mutedText,
-    cursor: ativo && !ocupado ? 'pointer' : 'default',
-  })
+  // Vocabulário do vesso-admin: botões/campo/filtro de components/vesso.tsx, painéis = cartão do admin.
+  const sec = botaoSecundarioCompacto
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }} aria-busy={ocupado}>
-      {/* barra de filtros */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        <h1 style={{ fontFamily: theme.display, fontSize: 22, fontWeight: 500, margin: 0 }}>{org.nome}</h1>
-        <select aria-label="Conta" value={filtros.conta} onChange={(e) => router.push(url({ conta: e.target.value }))}
-          style={{ fontSize: 12, padding: '4px 6px', background: 'transparent', color: theme.text, border: `1px solid ${theme.border2}`, borderRadius: theme.radiusSm }}>
-          {contas.map((c) => <option key={c.id_conta} value={c.id_conta}>{c.apelido}</option>)}
-        </select>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-          <Link href={url({ mes: mesDesloc(-1) })} aria-label="Mês anterior" className="f-link" style={{ textDecoration: 'none', padding: '0 4px' }}>‹</Link>
-          <span style={{ minWidth: 64, textAlign: 'center', fontWeight: 600 }}>{MESES[mm - 1]}/{ano}</span>
-          <Link href={url({ mes: mesDesloc(1) })} aria-label="Próximo mês" className="f-link" style={{ textDecoration: 'none', padding: '0 4px' }}>›</Link>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }} aria-busy={ocupado}>
+      {/* cabeçalho da tela: eyebrow + organização em serifa, controles à direita */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', paddingBottom: 14, borderBottom: `1px solid ${theme.borderStrong}` }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: theme.accent }}>Conciliação</div>
+          <h1 className="v-manchete" style={{ fontFamily: theme.display, fontSize: 32, fontWeight: 500, letterSpacing: '-0.015em', lineHeight: 1.1, margin: '6px 0 0', color: theme.text }}>{org.nome}</h1>
         </div>
-        <nav aria-label="Filtrar por estado" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {([undefined, 'pendente', 'divergente', 'conciliado', 'ignorado'] as const).map((s) => {
-            const ativo = filtros.status === s
-            const n = s ? contagem[s] ?? 0 : total
-            return (
-              <Link key={s ?? 'todos'} href={url({ status: s })} aria-current={ativo ? 'true' : undefined}
-                style={{ fontSize: 12, padding: '3px 8px', borderRadius: theme.radiusSm, textDecoration: 'none',
-                  border: `1px solid ${ativo ? theme.accentBorder : 'transparent'}`, background: ativo ? theme.realceBg2 : 'transparent',
-                  color: ativo ? theme.text : theme.text2 }}>
-                {s ? `${ESTADO[s].icone} ${ESTADO[s].rotulo}` : 'Todos'} <span style={{ fontVariantNumeric: 'tabular-nums', color: f.mutedText }}>{n}</span>
-              </Link>
-            )
-          })}
-        </nav>
-        <input ref={refBusca} value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar descrição  /"
-          aria-label="Buscar no extrato" style={{ fontSize: 12, padding: '4px 8px', width: 200, background: 'transparent', color: theme.text, border: `1px solid ${theme.border2}`, borderRadius: theme.radiusSm }} />
-        <button onClick={() => setModal('ajuda')} style={{ ...botao(), marginLeft: 'auto' }} aria-label="Atalhos de teclado"><kbd className="f-kbd">?</kbd> atalhos</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <select aria-label="Conta" value={filtros.conta} onChange={(e) => router.push(url({ conta: e.target.value }))} style={campoCompacto}>
+            {contas.map((c) => <option key={c.id_conta} value={c.id_conta}>{c.apelido}</option>)}
+          </select>
+          <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${theme.border2}`, borderRadius: theme.radiusSm }}>
+            <Link href={url({ mes: mesDesloc(-1) })} aria-label="Mês anterior" style={{ padding: '6px 10px', color: theme.text2, textDecoration: 'none' }}>‹</Link>
+            <span style={{ minWidth: 76, textAlign: 'center', fontSize: 12.5, fontWeight: 700, color: theme.text }}>{MESES[mm - 1]}/{ano}</span>
+            <Link href={url({ mes: mesDesloc(1) })} aria-label="Próximo mês" style={{ padding: '6px 10px', color: theme.text2, textDecoration: 'none' }}>›</Link>
+          </div>
+          <input ref={refBusca} value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar no extrato  /"
+            aria-label="Buscar no extrato" style={{ ...campoCompacto, width: 200 }} />
+          <button onClick={() => setModal('ajuda')} style={sec()} aria-label="Atalhos de teclado"><kbd className="f-kbd">?</kbd> Atalhos</button>
+        </div>
       </div>
 
-      <div className="v-stack" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,3fr) minmax(340px,2fr)', gap: 14, alignItems: 'start' }}>
+      <nav aria-label="Filtrar por estado" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {([undefined, 'pendente', 'divergente', 'conciliado', 'ignorado'] as const).map((s) => {
+          const ativo = filtros.status === s
+          const n = s ? contagem[s] ?? 0 : total
+          return (
+            <Link key={s ?? 'todos'} href={url({ status: s })} aria-current={ativo ? 'true' : undefined}
+              style={{ ...estiloFiltro(ativo), textDecoration: 'none' }}>
+              {s && <span aria-hidden className={ativo ? undefined : ESTADO[s].ic}>{ESTADO[s].icone}</span>}
+              {s ? ESTADO[s].rotulo : 'Todos'}
+              <span style={{ fontVariantNumeric: 'tabular-nums', opacity: 0.75 }}>{n}</span>
+            </Link>
+          )
+        })}
+      </nav>
+
+      <div className="v-stack" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,3fr) minmax(360px,2fr)', gap: 16, alignItems: 'start' }}>
         {/* extrato */}
-        <section aria-label="Extrato" style={{ border: `1px solid ${theme.border}`, borderRadius: theme.radiusSm, background: theme.surface, overflow: 'hidden' }}>
-          <div className="v-scroll-x" style={{ maxHeight: 'calc(100vh - 170px)', overflowY: 'auto' }}>
+        <Painel aria-label="Extrato" rotulo={`Extrato · ${contas.find((c) => c.id_conta === filtros.conta)?.apelido ?? ''}`}
+          direita={<span style={{ fontSize: 11.5, color: theme.text3, fontVariantNumeric: 'tabular-nums' }}>{visiveis.length} movimento{visiveis.length === 1 ? '' : 's'}</span>}>
+          <div className="v-scroll-x" style={{ maxHeight: 'calc(100vh - 290px)', overflowY: 'auto' }}>
             <table className="f-tabela" role="grid" aria-rowcount={visiveis.length}>
               <thead>
                 <tr>
                   <th style={{ width: 28 }} aria-label="Selecionado" />
-                  <th style={{ width: 110 }}>Estado</th>
-                  <th style={{ width: 52 }}>Data</th>
+                  <th style={{ width: 118 }}>Estado</th>
+                  <th style={{ width: 56 }}>Data</th>
                   <th>Descrição</th>
                   <th className="f-num">R$</th>
                   <th className="f-num" style={{ width: '18ch' }}>Diferença</th>
@@ -302,38 +307,37 @@ export default function ConciliacaoClient({ org, contas, plano, mes, filtros, in
                       onClick={() => setFocoId(m.id_movimento)}
                       onDoubleClick={() => ABERTO(m) && setSelMov((s) => sel ? s.filter((x) => x !== m.id_movimento) : [...s, m.id_movimento])}
                       style={{ cursor: 'default' }}>
-                      <td style={{ textAlign: 'center' }}>{sel ? '■' : ''}</td>
+                      <td style={{ textAlign: 'center', color: theme.realce }}>{sel ? '■' : ''}</td>
                       <td><span className={e.ic} aria-hidden>{e.icone}</span> {e.rotulo}</td>
                       <td style={{ fontVariantNumeric: 'tabular-nums' }}>{dataBR(m.data_movimento)}</td>
                       <td style={{ maxWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }} title={m.descricao_bruta ?? ''}>
                         {m.descricao_bruta ?? '(sem descrição)'}
-                        {m.contraparte_nome && <span style={{ color: f.mutedText }}> · {m.contraparte_nome}</span>}
+                        {m.contraparte_nome && <span style={{ color: theme.text3 }}> · {m.contraparte_nome}</span>}
                         {m.status === 'ignorado' && m.ignorado_motivo && <span> — {m.ignorado_motivo}</span>}
-                        {m.id_transferencia && <span style={{ color: f.mutedText }}> · transferência</span>}
+                        {m.id_transferencia && <span style={{ color: theme.text3 }}> · transferência</span>}
                         {m.removido_na_fonte_em && <span className="f-delta"> · sumiu do extrato na fonte</span>}
                       </td>
                       <td className="f-num">{fmtBRL(m.valor)}</td>
                       <td className="f-num">
                         {m.status === 'divergente'
                           ? <span className="f-delta">{deltaTxt(centavos(m.valor < 0 ? -m.diferenca : m.diferenca))}</span>
-                          : m.status === 'conciliado' ? <span style={{ color: f.mutedText }}>0,00</span> : ''}
+                          : m.status === 'conciliado' ? <span style={{ color: theme.text3 }}>0,00</span> : ''}
                       </td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
-            {visiveis.length === 0 && <div style={{ padding: 24, fontSize: 13, color: f.mutedText }}>Nenhum movimento neste filtro.</div>}
-            {proximo && <button onClick={maisLinhas} style={{ ...botao(), margin: 10 }}>Carregar mais</button>}
+            {visiveis.length === 0 && <Vazio>Nenhum movimento neste filtro.</Vazio>}
+            {proximo && <div style={{ padding: 12 }}><button onClick={maisLinhas} style={sec(ocupado)}>Carregar mais</button></div>}
           </div>
-        </section>
+        </Painel>
 
         {/* painel direito */}
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'sticky', top: 64 }}>
+        <aside style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 86 }}>
           <PainelFoco m={focado} />
 
-          <section aria-label="Sugestões" style={{ border: `1px solid ${theme.border}`, borderRadius: theme.radiusSm, background: theme.surface }}>
-            <Cabecalho>Sugestões</Cabecalho>
+          <Painel aria-label="Sugestões" rotulo="Sugestões">
             {!focado || !ABERTO(focado) ? <Vazio>{focado ? 'Movimento já resolvido.' : 'Nenhum movimento em foco.'}</Vazio>
               : sugFoco === 'carregando' || sugFoco === undefined ? <Vazio>Buscando…</Vazio>
               : sugFoco.length === 0 ? <Vazio>Sem sugestão. <kbd className="f-kbd">L</kbd> lança e concilia.</Vazio>
@@ -343,38 +347,37 @@ export default function ConciliacaoClient({ org, contas, plano, mes, filtros, in
                     const sel = selTit.includes(s.id_titulo)
                     return (
                       <tr key={s.id_titulo} data-foco={sel ? '1' : undefined} onClick={() => { setSelTit((t) => sel ? t.filter((x) => x !== s.id_titulo) : [...t, s.id_titulo]); setDaSugestao(true) }} style={{ cursor: 'pointer' }}>
-                        <td style={{ width: 26 }}><kbd className="f-kbd">{i + 1}</kbd></td>
+                        <td style={{ width: 28 }}><kbd className="f-kbd">{i + 1}</kbd></td>
                         <td style={{ maxWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }} title={`${s.descricao} — ${s.motivo}`}>
-                          {s.descricao} <span style={{ color: f.mutedText }}>· {s.motivo}</span>
+                          {s.descricao} <span style={{ color: theme.text3 }}>· {s.motivo}</span>
                         </td>
-                        <td className="f-num" style={{ width: '6ch', color: f.mutedText }}>{s.score}</td>
+                        <td className="f-num" style={{ width: '6ch', color: theme.text3 }} title="pontuação da sugestão">{s.score}</td>
                         <td className="f-num">{fmtBRL(s.saldo)}</td>
                       </tr>
                     )
                   })}
                 </tbody></table>
               )}
-          </section>
+          </Painel>
 
-          <section aria-label="Títulos em aberto" style={{ border: `1px solid ${theme.border}`, borderRadius: theme.radiusSm, background: theme.surface }}>
-            <Cabecalho direita={<input value={buscaTit} onChange={(e) => setBuscaTit(e.target.value)} placeholder="filtrar" aria-label="Filtrar títulos"
-              style={{ fontSize: 11, padding: '2px 6px', width: 120, background: 'transparent', color: theme.text, border: `1px solid ${theme.border2}`, borderRadius: theme.radiusSm }} />}>
-              Títulos a {direcao === 'pagar' ? 'pagar' : direcao === 'receber' ? 'receber' : '—'} · {titulosVis.length}
-            </Cabecalho>
-            <div style={{ maxHeight: 'calc(100vh - 520px)', minHeight: 120, overflowY: 'auto' }}>
+          <Painel aria-label="Títulos em aberto"
+            rotulo={`Títulos a ${direcao === 'pagar' ? 'pagar' : direcao === 'receber' ? 'receber' : '—'} · ${titulosVis.length}`}
+            direita={<input value={buscaTit} onChange={(e) => setBuscaTit(e.target.value)} placeholder="Filtrar" aria-label="Filtrar títulos"
+              style={{ ...campoCompacto, width: 130, padding: '4px 8px', fontSize: 12 }} />}>
+            <div style={{ maxHeight: 'calc(100vh - 600px)', minHeight: 120, overflowY: 'auto' }}>
               <table className="f-tabela"><tbody>
                 {titulosVis.map((t) => {
                   const sel = selTit.includes(t.id_titulo)
                   return (
                     <tr key={t.id_titulo} data-foco={sel ? '1' : undefined} aria-selected={sel} style={{ cursor: 'pointer' }}
                       onClick={() => { setSelTit((x) => sel ? x.filter((y) => y !== t.id_titulo) : [...x, t.id_titulo]); setDaSugestao(false) }}>
-                      <td style={{ width: 20, textAlign: 'center' }}>{sel ? '■' : ''}</td>
-                      <td style={{ fontVariantNumeric: 'tabular-nums', width: 44, color: t.faixa === 'vencido' ? f.dueLate : t.faixa === 'hoje' ? f.dueToday : undefined }}
+                      <td style={{ width: 22, textAlign: 'center', color: theme.realce }}>{sel ? '■' : ''}</td>
+                      <td style={{ fontVariantNumeric: 'tabular-nums', width: 48, color: t.faixa === 'vencido' ? f.dueLate : t.faixa === 'hoje' ? f.dueToday : undefined }}
                         title={t.faixa === 'vencido' ? `vencido há ${t.dias_atraso} dia(s)` : t.faixa === 'hoje' ? 'vence hoje' : undefined}>
                         {t.faixa === 'vencido' ? '▲ ' : ''}{dataBR(t.data_vencimento)}
                       </td>
                       <td style={{ maxWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.descricao}>
-                        {t.descricao}{t.contraparte && <span style={{ color: f.mutedText }}> · {t.contraparte}</span>}
+                        {t.descricao}{t.contraparte && <span style={{ color: theme.text3 }}> · {t.contraparte}</span>}
                       </td>
                       <td className="f-num">{fmtBRL(t.saldo)}</td>
                     </tr>
@@ -383,50 +386,47 @@ export default function ConciliacaoClient({ org, contas, plano, mes, filtros, in
               </tbody></table>
               {direcao && titulosVis.length === 0 && <Vazio>Nenhum título em aberto nesta direção.</Vazio>}
             </div>
-          </section>
+          </Painel>
 
           {/* seleção e Δ ao vivo */}
-          <section aria-label="Seleção" aria-live="polite" style={{ border: `1px solid ${theme.borderStrong}`, borderRadius: theme.radiusSm, background: theme.surface, padding: 10, display: 'grid', gap: 6 }}>
-            <Linha rotulo={`Movimento${movsSel.length > 1 ? `s (${movsSel.length})` : ''}`} valor={movsSel.reduce((s, m) => s + restante(m), 0)} />
-            <Linha rotulo={`Título${titsSel.length > 1 ? `s (${titsSel.length})` : ''}`} valor={titsSel.reduce((s, t) => s + t.saldo, 0)} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, borderTop: `1px solid ${theme.borderFaint}`, paddingTop: 6 }}>
-              <span>Diferença</span>
-              {/* Δ só depois de escolher título: antes disso a "diferença" é o movimento inteiro, e em tijolo assusta à toa */}
-              <span className={titsSel.length && aloc.delta !== 0 ? 'f-delta' : undefined} style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {!titsSel.length ? '—' : aloc.delta === 0 ? '0,00' : deltaTxt(deltaAssinado)}
-              </span>
-            </div>
-            {(erroDirecao || (aloc.erro && titsSel.length > 0 && movsSel.length > 0)) && <div style={{ fontSize: 12, color: f.negativeText }}>▲ {erroDirecao ?? aloc.erro}</div>}
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <button disabled={!podeConciliar} onClick={() => conciliarSelecao(true)}
-                style={{ ...botao(podeConciliar), background: podeConciliar ? theme.text : 'transparent', color: podeConciliar ? theme.bg : f.mutedText,
-                  border: podeConciliar ? 'none' : `1px solid ${theme.border2}`, fontWeight: 600 }}>
-                {titsSel.length && aloc.delta !== 0 ? 'Conciliar parcial' : titsSel.length ? 'Conciliar' : 'Conciliar com a sugestão 1'} <kbd className="f-kbd">↵</kbd>
+          <Painel aria-label="Seleção" rotulo="Seleção" style={{ borderColor: theme.borderStrong }}>
+            <div aria-live="polite" style={{ padding: '12px 14px', display: 'grid', gap: 7 }}>
+              <Linha rotulo={`Movimento${movsSel.length > 1 ? `s (${movsSel.length})` : ''}`} valor={movsSel.reduce((s, m) => s + restante(m), 0)} />
+              <Linha rotulo={`Título${titsSel.length > 1 ? `s (${titsSel.length})` : ''}`} valor={titsSel.reduce((s, t) => s + t.saldo, 0)} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: `1px solid ${theme.borderFaint}`, paddingTop: 9, marginTop: 2 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700 }}>Diferença</span>
+                {/* Δ só depois de escolher título: antes disso a "diferença" é o movimento inteiro, e em tijolo assusta à toa */}
+                <span className={titsSel.length && aloc.delta !== 0 ? 'f-delta' : undefined} style={{ fontFamily: theme.display, fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>
+                  {!titsSel.length ? '—' : aloc.delta === 0 ? '0,00' : deltaTxt(deltaAssinado)}
+                </span>
+              </div>
+              {(erroDirecao || (aloc.erro && titsSel.length > 0 && movsSel.length > 0)) && (
+                <div style={{ fontSize: 12, color: theme.negative, background: theme.negativeBg, padding: '7px 10px', borderRadius: theme.radiusSm }}>▲ {erroDirecao ?? aloc.erro}</div>
+              )}
+              <button disabled={!podeConciliar} onClick={() => conciliarSelecao(true)} style={{ ...botaoPrimario(!podeConciliar), width: '100%', marginTop: 4 }}>
+                {titsSel.length && aloc.delta !== 0 ? 'Conciliar parcial' : titsSel.length ? 'Conciliar' : 'Conciliar com a sugestão 1'} <kbd className="f-kbd" style={{ marginLeft: 6 }}>↵</kbd>
               </button>
-              {pode('lancar') && <button disabled={ocupado || !focado || !ABERTO(focado)} onClick={() => setModal('lancar')} style={botao(!!focado && ABERTO(focado))}>Lançar <kbd className="f-kbd">L</kbd></button>}
-              {pode('conciliar') && <button disabled={ocupado || focado?.status !== 'pendente'} onClick={() => setModal('transferir')} style={botao(focado?.status === 'pendente')}>Transferência <kbd className="f-kbd">T</kbd></button>}
-              {pode('ignorar') && <button disabled={ocupado || focado?.status !== 'pendente'} onClick={() => setModal('ignorar')} style={botao(focado?.status === 'pendente')}>Ignorar <kbd className="f-kbd">I</kbd></button>}
-              {focado?.status === 'ignorado' && pode('ignorar') && (
-                <button disabled={ocupado} onClick={() => executar(() => A.desfazerIgnorar(org.id, filtros, lim(), focado.id_movimento), 'Voltou a pendente', undefined, false)} style={botao()}>Desfazer ignorar</button>
-              )}
-              {focado?.id_transferencia && pode('conciliar') && (
-                <button disabled={ocupado} onClick={() => setModal('desfazer_transf')} style={botao()}>Desfazer transferência…</button>
-              )}
-              {(focado?.status === 'conciliado' || focado?.status === 'divergente') && !focado.id_transferencia && pode('conciliar') && (
-                <button disabled={ocupado} onClick={() => setModal('desconciliar')} style={botao()}>Desconciliar…</button>
-              )}
-              <button disabled={ocupado || !pilha.length} onClick={desfazerUltimo} style={botao(!!pilha.length)} title={pilha.at(-1) ? `Desfazer ${pilha.at(-1)!.rotulo}` : undefined}>Desfazer <kbd className="f-kbd">U</kbd></button>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {pode('lancar') && <button disabled={ocupado || !focado || !ABERTO(focado)} onClick={() => setModal('lancar')} style={sec(ocupado || !focado || !ABERTO(focado))}>Lançar <kbd className="f-kbd">L</kbd></button>}
+                {pode('conciliar') && <button disabled={ocupado || focado?.status !== 'pendente'} onClick={() => setModal('transferir')} style={sec(ocupado || focado?.status !== 'pendente')}>Transferência <kbd className="f-kbd">T</kbd></button>}
+                {pode('ignorar') && <button disabled={ocupado || focado?.status !== 'pendente'} onClick={() => setModal('ignorar')} style={sec(ocupado || focado?.status !== 'pendente')}>Ignorar <kbd className="f-kbd">I</kbd></button>}
+                {focado?.status === 'ignorado' && pode('ignorar') && (
+                  <button disabled={ocupado} onClick={() => executar(() => A.desfazerIgnorar(org.id, filtros, lim(), focado.id_movimento), 'Voltou a pendente', undefined, false)} style={sec(ocupado)}>Desfazer ignorar</button>
+                )}
+                {focado?.id_transferencia && pode('conciliar') && (
+                  <button disabled={ocupado} onClick={() => setModal('desfazer_transf')} style={sec(ocupado)}>Desfazer transferência…</button>
+                )}
+                {(focado?.status === 'conciliado' || focado?.status === 'divergente') && !focado.id_transferencia && pode('conciliar') && (
+                  <button disabled={ocupado} onClick={() => setModal('desconciliar')} style={sec(ocupado)}>Desconciliar…</button>
+                )}
+                <button disabled={ocupado || !pilha.length} onClick={desfazerUltimo} style={sec(ocupado || !pilha.length)} title={pilha.at(-1) ? `Desfazer ${pilha.at(-1)!.rotulo}` : undefined}>Desfazer <kbd className="f-kbd">U</kbd></button>
+              </div>
             </div>
-          </section>
+          </Painel>
         </aside>
       </div>
 
-      {aviso && (
-        <div role={aviso.tipo === 'erro' ? 'alert' : 'status'} style={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 60,
-          padding: '8px 14px', fontSize: 13, borderRadius: theme.radiusSm, background: theme.text, color: theme.bg, boxShadow: '0 8px 24px rgba(17,23,25,.22)', maxWidth: 560 }}>
-          {aviso.tipo === 'erro' ? '▲ ' : '✓ '}{aviso.texto}
-        </div>
-      )}
+      {aviso && <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso>}
 
       {modal === 'ajuda' && <ModalAjuda onFechar={() => setModal(null)} />}
       {modal === 'lancar' && focado && (
@@ -463,34 +463,32 @@ function PainelFoco({ m }: { m: Movimento | undefined }) {
   if (!m) return null
   const e = ESTADO[m.status]
   return (
-    <div style={{ border: `1px solid ${theme.border}`, borderRadius: theme.radiusSm, background: theme.surface, padding: '8px 10px', fontSize: 12, display: 'grid', gap: 2 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descricao_bruta ?? '(sem descrição)'}</span>
-        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>R$ {fmtBRL(m.valor)}</span>
+    <Painel>
+      <div style={{ padding: '14px 16px', display: 'grid', gap: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+          <span style={{ fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descricao_bruta ?? '(sem descrição)'}</span>
+          <span style={{ fontFamily: theme.display, fontSize: 22, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 13, color: theme.text3, marginRight: 4 }}>R$</span>{fmtBRL(m.valor)}
+          </span>
+        </div>
+        <div style={{ fontSize: 11.5, color: theme.text3, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <span><span className={e.ic}>{e.icone}</span> {e.rotulo}</span>
+          <span>{m.data_movimento.split('-').reverse().join('/')}</span>
+          <span style={{ textTransform: 'uppercase', letterSpacing: '.06em' }}>{m.origem}</span>
+          {m.status === 'divergente' && m.motivo_divergencia && <span>{m.motivo_divergencia === 'removido_na_fonte' ? 'sumiu do extrato na fonte' : 'conciliação parcial'}</span>}
+          {m.valor_conciliado > 0 && <span>conciliado R$ {fmtBRL(m.valor_conciliado)}</span>}
+        </div>
       </div>
-      <div style={{ color: f.mutedText }}>
-        <span className={e.ic}>{e.icone}</span> {e.rotulo} · {m.data_movimento.split('-').reverse().join('/')} · {m.origem}
-        {m.status === 'divergente' && m.motivo_divergencia && <> · {m.motivo_divergencia === 'removido_na_fonte' ? 'sumiu do extrato na fonte' : 'conciliação parcial'}</>}
-        {m.valor_conciliado > 0 && <> · conciliado R$ {fmtBRL(m.valor_conciliado)}</>}
-      </div>
-    </div>
+    </Painel>
   )
 }
 
-function Cabecalho({ children, direita }: { children: React.ReactNode; direita?: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: `1px solid ${theme.borderFaint}` }}>
-      <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: f.mutedText }}>{children}</span>
-      {direita}
-    </div>
-  )
-}
 function Vazio({ children }: { children: React.ReactNode }) {
-  return <div style={{ padding: '10px', fontSize: 12, color: f.mutedText }}>{children}</div>
+  return <div style={{ padding: '14px', fontSize: 12.5, color: theme.text3 }}>{children}</div>
 }
 function Linha({ rotulo, valor }: { rotulo: string; valor: number }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}>
       <span style={{ color: theme.text2 }}>{rotulo}</span>
       <span style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtBRL(valor)}</span>
     </div>

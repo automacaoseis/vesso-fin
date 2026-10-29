@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { fmtBRL } from '@vesso-fin/shared'
 import { theme } from '@/lib/theme'
 import { f } from '@/lib/fin'
+import { TituloSecao } from '@/components/vesso'
+import { botaoPrimarioCompacto, Painel } from '@/components/fin-ui'
 import { enviarOfx, extratosDa, type Extrato } from './acoes'
 
 export interface Conexao {
@@ -28,13 +30,13 @@ const ESTADO_EXTRATO: Record<Extrato['status'], string> = { recebido: '○ Na fi
 export default function ConexoesClient({ conexoes }: { conexoes: Conexao[] }) {
   const orgs = [...new Set(conexoes.map((c) => c.organizacao))]
   return (
-    <div style={{ display: 'grid', gap: 20 }}>
-      {orgs.map((o) => (
-        <section key={o} aria-label={o} style={{ display: 'grid', gap: 8 }}>
-          <h2 style={{ fontFamily: theme.display, fontSize: 19, fontWeight: 500, margin: 0 }}>{o}</h2>
-          <div style={{ border: `1px solid ${theme.border}`, borderRadius: theme.radiusSm, background: theme.surface }}>
+    <div style={{ display: 'grid', gap: 32 }}>
+      {orgs.map((o, i) => (
+        <section key={o} aria-label={o} style={{ display: 'grid', gap: 14 }}>
+          <TituloSecao titulo={o} sub={`${conexoes.filter((c) => c.organizacao === o).length} conexão(ões)`} giro={[0, 90, 180, 270][i % 4]} />
+          <Painel>
             {conexoes.filter((c) => c.organizacao === o).map((c) => <Linha key={c.id_conexao} c={c} />)}
-          </div>
+          </Painel>
         </section>
       ))}
     </div>
@@ -101,7 +103,7 @@ function Linha({ c }: { c: Conexao }) {
 
   return (
     <div style={{ borderBottom: `1px solid ${theme.borderFaint}` }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) 90px 110px minmax(0,1.3fr) auto', gap: 12, alignItems: 'center', padding: '8px 12px', fontSize: 13 }} className="v-stack">
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) 90px 110px minmax(0,1.3fr) auto', gap: 14, alignItems: 'center', padding: '14px 16px', fontSize: 13 }} className="v-stack">
         <button onClick={abrir} aria-expanded={aberta} style={{ textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: theme.text, fontSize: 13 }}>
           <span aria-hidden style={{ color: f.mutedText, display: 'inline-block', width: 14 }}>{aberta ? '▾' : '▸'}</span>
           <strong style={{ fontWeight: 600 }}>{c.conta}</strong> <span style={{ color: f.mutedText }}>· {c.instituicao ?? '—'}</span>
@@ -115,16 +117,15 @@ function Linha({ c }: { c: Conexao }) {
         {c.metodo === 'ofx' && c.pode_importar ? (
           <>
             <input ref={input} type="file" accept=".ofx,application/x-ofx" onChange={enviar} hidden aria-label={`Importar OFX em ${c.conta}`} />
-            <button onClick={() => input.current?.click()} disabled={enviando}
-              style={{ fontSize: 12, padding: '4px 10px', borderRadius: theme.radiusSm, border: 'none', background: theme.text, color: theme.bg, fontWeight: 600, cursor: enviando ? 'wait' : 'pointer' }}>
+            <button onClick={() => input.current?.click()} disabled={enviando} style={botaoPrimarioCompacto(enviando)}>
               {enviando ? 'Enviando…' : 'Importar OFX'}
             </button>
           </>
         ) : <span />}
       </div>
-      {aviso && <div role={aviso.erro ? 'alert' : 'status'} style={{ padding: '0 12px 8px 38px', fontSize: 12, color: aviso.erro ? f.negativeText : theme.text2 }}>{aviso.erro ? '▲ ' : ''}{aviso.texto}</div>}
+      {aviso && <div role={aviso.erro ? 'alert' : 'status'} style={{ padding: '0 16px 12px 44px', fontSize: 12.5, color: aviso.erro ? f.negativeText : theme.text2 }}>{aviso.erro ? '▲ ' : ''}{aviso.texto}</div>}
       {aberta && (
-        <div style={{ padding: '0 12px 10px 38px' }}>
+        <div style={{ padding: '0 16px 14px 44px' }}>
           {!extratos ? <div style={{ fontSize: 12, color: f.mutedText }}>Carregando…</div>
             : extratos.length === 0 ? <div style={{ fontSize: 12, color: f.mutedText }}>Nenhum arquivo recebido ainda.</div>
             : (

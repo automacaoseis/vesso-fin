@@ -732,3 +732,7 @@ kbd.f-kbd {
 
 /* O logo é ink (#111719): no escuro some. Invertido vira quase off-white, dentro da marca. */
 [data-theme='dark'] .f-logo { filter: invert(1); }
+
+/* Cartão clicável (organizações): o fio esquenta no hover, como os cartões-filtro do admin. */
+.f-cartao { transition: border-color .15s, box-shadow .15s; }
+.f-cartao:hover { border-color: var(--v-borderVivid) !important; }
