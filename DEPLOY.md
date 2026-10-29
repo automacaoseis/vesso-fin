@@ -12,8 +12,9 @@ Conferir que o pooler aceita os logins (do seu terminal):
 psql "postgres://vesso_fin_api.gzdvkqzliyupiuyaqkpj:<senha1>@<host do pooler>:6543/postgres" -c "select current_user"
 psql "postgres://vesso_fin_worker.gzdvkqzliyupiuyaqkpj:<senha2>@<host do pooler>:6543/postgres" -c "select current_user"
 ```
-O host está em Supabase → Connect → **Transaction pooler** (us-east-1). Baixe também o certificado em
-Settings → Database → SSL Configuration (vira `DATABASE_CA`).
+O host é **aws-1-us-east-1.pooler.supabase.com** (o projeto mora no cluster aws-1; o aws-0 responde "tenant not found").
+`DATABASE_CA` é opcional: a raiz do Supabase já vem no código (`apps/api/src/db.ts`).
+⚠️ A senha na URL e a do `alter role` têm que ser idênticas — sem colchetes; use só letras e números (`openssl rand -hex 24`).
 
 ## 1. Código no GitHub
 Railway e Vercel puxam do GitHub. Criar o repositório privado `vesso-fin` e dar push da `main`.
@@ -24,7 +25,7 @@ Railway e Vercel puxam do GitHub. Criar o repositório privado `vesso-fin` e dar
 | Config file | `apps/api/railway.api.json` | `apps/api/railway.worker.json` |
 | Start command | `node --enable-source-maps apps/api/dist/server.js` | `node --enable-source-maps apps/api/dist/worker.js` |
 | Domínio público | sim (gera a URL da API) | **não** |
-| Variáveis | `DATABASE_URL` (login api), `DATABASE_CA`, `SUPABASE_URL`, `VESSO_SERVICE_SECRET` | `DATABASE_URL_WORKER` (login worker), `DATABASE_CA`, `INTERVALO_MS=2000` |
+| Variáveis | `DATABASE_URL` (login api), `SUPABASE_URL`, `VESSO_SERVICE_SECRET` | `DATABASE_URL_WORKER` (login worker), `INTERVALO_MS=2000` |
 
 - Start com `node` direto (sem `pnpm` no runtime: o bundle já tem as dependências dentro).
 - Root Directory vazio (o build precisa do monorepo inteiro). Região US East.
