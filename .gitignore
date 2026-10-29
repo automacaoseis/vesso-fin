@@ -8,3 +8,4 @@ dist/
 coverage/
 apps/web/AGENTS.md
 .next-teste/
+apps/web/next-env.d.ts
