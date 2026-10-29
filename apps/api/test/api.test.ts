@@ -192,6 +192,23 @@ describe.skipIf(!url)('API × banco', () => {
     })
   })
 
+  describe('relatórios', () => {
+    it('DRE e detalhamento por competência; outro usuário não vê', async () => {
+      const dre = (await get(`/orgs/${ORG.b}/dre?de=2026-08-01&ate=2026-09-01`, 'analista')).json
+      expect(dre.length).toBeGreaterThan(0)
+      const planos = [...new Set(dre.map((r: any) => r.id_plano_conta))].join(',')
+      const fato = (await get(`/orgs/${ORG.b}/fato?regime=competencia&de=2026-08-01&ate=2026-09-01&planos=${planos}`, 'analista')).json
+      expect(fato.length).toBeGreaterThan(0)
+      expect(fato[0]).toHaveProperty('descricao')
+      expect(fato.reduce((s: number, f: any) => s + f.valor, 0)).toBeCloseTo(dre.reduce((s: number, r: any) => s + r.valor, 0))
+      expect((await get(`/orgs/${ORG.b}/fato?regime=competencia&de=2026-08-01&ate=2026-09-01&planos=${planos}`, 'gestor')).json).toEqual([])
+    })
+    it('detalhamento valida a entrada', async () => {
+      expect((await get(`/orgs/${ORG.b}/fato?regime=x&de=2026-08-01&ate=2026-09-01&planos=a`, 'analista')).status).toBe(422)
+      expect((await get(`/orgs/${ORG.b}/fato?regime=caixa&de=2026-08-01&ate=2026-09-01&planos=`, 'analista')).status).toBe(422)
+    })
+  })
+
   describe('fechamento e tempo', () => {
     it('checklist vem junto; enviar com bloqueio → 422 com o motivo', async () => {
       const f = (await get(`/orgs/${ORG.b}/fechamentos/2026-09-01`, 'analista')).json

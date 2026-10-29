@@ -24,13 +24,14 @@ export default function Shell({ orgs, email, tema, densidade, children }: {
   const path = usePathname()
   const m = /^\/org\/([^/]+)(?:\/([^/]+))?/.exec(path)
   const orgAtual = m ? orgs.find((o) => o.id_org === m[1]) : undefined
-  const largo = m?.[2] === 'conciliacao'
+  const largo = m?.[2] === 'conciliacao' || m?.[2] === 'relatorios'
   const largura = largo ? '100%' : 'var(--v-frame)'
 
   const itens: { href: string; rotulo: string; ativo: boolean }[] = orgAtual
     ? [
         { href: '/', rotulo: 'Organizações', ativo: false },
         { href: `/org/${orgAtual.id_org}/conciliacao`, rotulo: 'Conciliação', ativo: m?.[2] === 'conciliacao' },
+        { href: `/org/${orgAtual.id_org}/relatorios`, rotulo: 'Relatórios', ativo: m?.[2] === 'relatorios' },
         { href: '/conexoes', rotulo: 'Conexões', ativo: false },
       ]
     : [

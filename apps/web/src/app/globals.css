@@ -736,3 +736,28 @@ kbd.f-kbd {
 /* Cartão clicável (organizações): o fio esquenta no hover, como os cartões-filtro do admin. */
 .f-cartao { transition: border-color .15s, box-shadow .15s; }
 .f-cartao:hover { border-color: var(--v-borderVivid) !important; }
+
+/* ── Demonstrativos (DRE/DFC): grade mês a mês portada do seis-sistema ───────────────
+   Rótulo e Total fixos ao rolar de lado; fundo OPACO nas células fixas (senão o número de
+   trás aparece por baixo); subtotal em destaque; % em itálico recuado; mês futuro esmaecido. */
+.f-demo { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+.f-demo th, .f-demo td { padding: 0 12px; height: 30px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--v-borderFaint); background: var(--v-surface); }
+.f-demo th { position: sticky; top: 0; z-index: 2; height: 34px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--v-text3); background: var(--v-surface2); min-width: 96px; }
+.f-demo .f-demo-rotulo { position: sticky; left: 0; z-index: 1; text-align: left; min-width: 300px; max-width: 360px; border-right: 1px solid var(--v-borderFaint); }
+.f-demo th.f-demo-rotulo { z-index: 3; }
+.f-demo .f-demo-total { position: sticky; right: 0; z-index: 1; font-weight: 600; border-left: 1px solid var(--v-borderFaint); }
+.f-demo th.f-demo-total { z-index: 3; }
+.f-demo tr.f-demo-destaque td { font-weight: 700; background: var(--v-surface2); color: var(--v-text); }
+.f-demo tr.f-demo-pct td { font-style: italic; color: var(--v-text3); font-size: 11.5px; height: 24px; }
+.f-demo tr.f-demo-sub td.f-demo-rotulo > * { padding-left: 30px !important; }
+.f-demo tr.f-demo-conta td { color: var(--v-text2); font-size: 12px; height: 26px; }
+.f-demo tr.f-demo-espaco td { height: 10px; border-bottom: none; }
+.f-demo td.f-demo-futuro, .f-demo th.f-demo-futuro { opacity: .5; }
+.f-demo td.f-demo-pctcol { color: var(--v-text3); font-size: 11.5px; }
+.f-demo tbody tr:not(.f-demo-espaco):hover td { background: var(--v-realceBg2); }
+.f-demo-abrir { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.f-demo-seta { width: 12px; color: var(--v-text3); font-size: 10px; }
+.f-demo-qtd { font-size: 10px; color: var(--v-text3); font-weight: 500; margin-left: 4px; }
+.f-demo-valor { all: unset; cursor: pointer; border-bottom: 1px dotted var(--v-border2); }
+.f-demo-valor:hover { color: var(--v-realce); border-bottom-color: var(--v-realce); }
+.f-demo-abrir:focus-visible, .f-demo-valor:focus-visible { outline: 2px solid var(--v-accent); outline-offset: 2px; }

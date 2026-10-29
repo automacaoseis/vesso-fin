@@ -33,6 +33,12 @@ export const qTitulosAbertos = z.object({
   limite: z.coerce.number().int().min(1).max(500).default(200),
 })
 export const qPeriodo = z.object({ de: zCompetencia, ate: zCompetencia })
+/** Detalhamento de uma célula do DRE/DFC: os lançamentos das contas `planos` no período. */
+export const qFato = z.object({
+  regime: z.enum(['competencia', 'caixa']),
+  de: zCompetencia, ate: zCompetencia,
+  planos: z.string().max(8000).transform((v) => v.split(',').filter(Boolean)).pipe(z.array(zId).min(1).max(200)),
+})
 
 export const bConciliar = z.object({
   itens: z.array(z.object({ id_titulo: zId, valor: zValorPositivo })).min(1).max(100),

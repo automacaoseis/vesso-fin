@@ -3,7 +3,7 @@ import type pg from 'pg'
 import type { z } from 'zod'
 import {
   ACOES, bCategorizar, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bRevisar, bTempoIniciar, bTempoParar,
-  bTransferencia, qMovimentos, qPeriodo, qTitulosAbertos, zCompetencia, zId, type ErroApi,
+  bTransferencia, qFato, qMovimentos, qPeriodo, qTitulosAbertos, zCompetencia, zId, type ErroApi,
 } from '@vesso-fin/shared'
 import { CABECALHO_SERVICO, verificarServico } from '@vesso-fin/shared/servico'
 import { AuthIndisponivel, TokenInvalido, type Claims, type VerificarToken } from './auth'
@@ -247,6 +247,21 @@ export function criarApp(deps: Deps) {
               coalesce(sum(valor) filter (where valor < 0), 0) as saidas
          from bpo_fin.v_fato where regime = 'projetado' and id_org = $1 and mes between $2 and $3
         group by data_ref order by data_ref`, [param(c, 'id'), p.de, p.ate])))
+  })
+
+  // Detalhamento (drill-down) do DRE/DFC: o que compõe um número. Competência = títulos; caixa = baixas.
+  app.get('/orgs/:id/fato', async (c) => {
+    const f = query(c, qFato)
+    return c.json(await ler(c, (q) => q(
+      `select f.regime, f.mes, f.data_ref, f.valor, f.origem, f.id_titulo, f.id_movimento,
+              t.descricao, ct.nome as contraparte, pc.codigo, pc.nome as conta, m.descricao_bruta as descricao_extrato
+         from bpo_fin.v_fato f
+         join bpo_fin.titulos t on t.id_titulo = f.id_titulo
+         left join bpo_fin.plano_contas pc on pc.id_plano_conta = f.id_plano_conta
+         left join bpo_fin.contrapartes ct on ct.id_contraparte = f.id_contraparte
+         left join bpo_fin.movimentos m on m.id_movimento = f.id_movimento
+        where f.id_org = $1 and f.regime = $2 and f.mes between $3 and $4 and f.id_plano_conta = any($5::uuid[])
+        order by f.data_ref, f.valor limit 1000`, [param(c, 'id'), f.regime, f.de, f.ate, f.planos])))
   })
 
   // ─── fechamento ──────────────────────────────────────────────────────────────────
