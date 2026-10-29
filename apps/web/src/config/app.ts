@@ -1,5 +1,5 @@
 export const APP = {
   nome: 'Vesso · FIN',
-  descricao: 'BPO financeiro da Vesso.',
+  descricao: 'O financeiro do consultório, conciliado e fechado todo mês.',
   ano: 2026,
 } as const

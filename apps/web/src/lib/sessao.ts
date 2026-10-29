@@ -24,11 +24,18 @@ export async function quemEstaLogado(): Promise<{ sub: string; email: string | n
 
 export async function entrarComSenha(email: string, senha: string): Promise<{ ok: true } | { ok: false; mensagem: string }> {
   const r = await auth('/token?grant_type=password', { email, password: senha })
-  if (r.status === 400 || r.status === 401) return { ok: false, mensagem: 'e-mail ou senha incorretos' }
-  if (r.status === 429) return { ok: false, mensagem: 'muitas tentativas; espere um pouco' }
-  if (!r.ok) return { ok: false, mensagem: 'não foi possível entrar agora' }
+  if (r.status === 400 || r.status === 401) return { ok: false, mensagem: 'E-mail ou senha inválidos.' }
+  if (r.status === 429) return { ok: false, mensagem: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.' }
+  if (!r.ok) return { ok: false, mensagem: 'Não foi possível entrar agora. Tente de novo em instantes.' }
   await gravarSessao((await r.json()) as SessaoAuth)
   return { ok: true }
+}
+
+/** Pede o link de nova senha ao Auth. O link leva à tela de nova senha do site configurado no Supabase (a do admin). */
+export async function pedirNovaSenha(email: string): Promise<{ ok: true } | { ok: false; mensagem: string }> {
+  const r = await auth('/recover', { email })
+  if (r.status === 429) return { ok: false, mensagem: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.' }
+  return { ok: true }   // não diz se o e-mail existe
 }
 
 export async function sair() {

@@ -36,8 +36,12 @@ async function chamar<T>(metodo: 'GET' | 'POST' | 'PATCH', caminho: string, corp
     body: bytes.length ? (bytes as BodyInit) : undefined,
     cache: 'no-store',
   })
-  if (r.status === 401) redirect('/login')
   const json = await r.json().catch(() => null)
+  // 401 por ASSINATURA de serviço = configuração do servidor (VESSO_SERVICE_SECRET diferente da API), não sessão:
+  // mandar para o login aqui virava um loop calado (entra, volta para o login, entra…).
+  if (r.status === 401 && /assinatura de serviço/.test(json?.mensagem ?? ''))
+    throw new Error(`configuração do servidor: a API recusou a assinatura (${json.mensagem}). Confira VESSO_SERVICE_SECRET.`)
+  if (r.status === 401) redirect('/login')
   if (!r.ok) throw new ErroDaApi(r.status, json)
   return json as T
 }

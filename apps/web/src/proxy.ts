@@ -36,5 +36,6 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   // Tudo menos estático. Server Actions passam por aqui também (são POST na própria rota).
-  matcher: ['/((?!_next/static|_next/image|icon.svg|favicon.ico).*)'],
+  // Arquivos públicos (logo, ícones) passam sem sessão — a tela de login precisa deles.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|ico)$).*)'],
 }

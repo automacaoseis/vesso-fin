@@ -672,21 +672,13 @@ textarea {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   CAMADA FINANCEIRA (--f-*) — docs/PROMPT.md §6. Só aponta para tokens da Vesso, exceto 5
-   tons de texto escurecidos DENTRO das mesmas famílias, por contraste medido no tema claro
-   (text4 2,57:1 · petróleo como texto 4,29:1 · ocre 3,13:1 · text3 sobre o painel 4,43:1).
+   CAMADA FINANCEIRA (--f-*) — docs/PROMPT.md §6, ajustada em 29/10/2026 a pedido do Luiz: a paleta é
+   INTEIRA a do vesso-admin, sem tons próprios. Os --f-* só dão nome financeiro a tokens --v-*.
    ⚠️ Direção do dinheiro é dada pelo SINAL, nunca pela cor. Verde/tijolo só falam de
       variação contra meta e de estado. `text4` não aparece no Vesso FIN.
    ═══════════════════════════════════════════════════════════════════════════════ */
-:root {
-  --f-accentText:   #476870;  /* petróleo p/ link/aba ativa — 5,9:1 */
-  --f-positiveText: #3F6556;  /* 6,4:1 */
-  --f-warningText:  #7A5E1C;  /* 6,0:1 */
-  --f-negativeText: #A0503F;  /* 5,5:1 */
-  --f-mutedText:    #5A6265;  /* substitui text3 em linha de tabela — 6,1:1 */
-}
-[data-theme='dark'] {
-  --f-accentText: var(--v-accent);  --f-positiveText: var(--v-positive);
+:root, [data-theme='dark'] {
+  --f-accentText: var(--v-realce);  --f-positiveText: var(--v-positive);
   --f-warningText: var(--v-warning); --f-negativeText: var(--v-negative);
   --f-mutedText: var(--v-text3);
 }
