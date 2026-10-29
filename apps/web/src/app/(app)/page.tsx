@@ -32,7 +32,7 @@ function Grupo({ titulo, sub, giro, orgs }: { titulo: string; sub: string; giro:
       <TituloSecao titulo={titulo} sub={sub} giro={giro} />
       <div className="v-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
         {orgs.map((o) => (
-          <Link key={o.id_org} href={`/org/${o.id_org}/conciliacao`} className="f-cartao" style={{
+          <Link key={o.id_org} href={`/org/${o.id_org}`} className="f-cartao" style={{
             display: 'flex', flexDirection: 'column', gap: 14, padding: '18px 20px', textDecoration: 'none', color: theme.text,
             background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: theme.radius, boxShadow: theme.shadow,
           }}>
@@ -43,7 +43,7 @@ function Grupo({ titulo, sub, giro, orgs }: { titulo: string; sub: string; giro:
               {o.competencia_inicial && <span>Desde {mesCurto(o.competencia_inicial)}</span>}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: `1px solid ${theme.borderFaint}` }}>
-              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: theme.realce }}>Conciliar</span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: theme.realce }}>Abrir</span>
               <span aria-hidden style={{ color: theme.realce }}>→</span>
             </div>
           </Link>

@@ -199,6 +199,62 @@ export function criarApp(deps: Deps) {
     return c.json({ ok: true })
   })
 
+  // ─── resumo da organização (tela 5) ────────────────────────────────────────────
+  // Uma chamada: saldos por conta (sistema × fonte), abertos por faixa, série diária (30 dias realizados +
+  // 60 projetados pelos títulos em aberto), DRE do mês e do anterior, pendências da fila.
+  app.get('/orgs/:id/resumo', async (c) => {
+    const id = param(c, 'id')
+    return c.json(await ler(c, async (q) => {
+      const mov = `select m.data_movimento as d, sum(m.valor) as v,
+                          sum(m.valor) filter (where m.valor > 0) as ent, sum(m.valor) filter (where m.valor < 0) as sai
+                     from bpo_fin.movimentos m join bpo_fin.contas ct on ct.id_conta = m.id_conta and ct.ativa
+                    where m.id_org = $1 and m.data_movimento > ct.data_saldo_inicial and m.removido_na_fonte_em is null
+                      and not exists (select 1 from bpo_fin.movimentos_ignorados i where i.id_movimento = m.id_movimento
+                                       and i.revertido_em is null and i.categoria = 'duplicado_na_fonte')
+                    group by 1`
+      const contas = await q(
+        `select ct.id_conta, ct.apelido, ct.instituicao, ct.tipo, ct.saldo_inicial, ct.data_saldo_inicial,
+                ct.saldo_inicial + coalesce(s.hoje, 0) as saldo_sistema,
+                f.data as fonte_data, f.saldo as fonte_saldo,
+                case when f.data is not null then ct.saldo_inicial + coalesce(s.na_fonte, 0) end as sistema_na_data_fonte
+           from bpo_fin.contas ct
+           left join lateral (select x.data, x.saldo from bpo_fin.saldos_extrato x where x.id_conta = ct.id_conta order by x.data desc limit 1) f on true
+           left join lateral (
+             select sum(m.valor) filter (where m.data_movimento <= current_date) as hoje,
+                    sum(m.valor) filter (where m.data_movimento <= f.data) as na_fonte
+               from bpo_fin.movimentos m
+              where m.id_conta = ct.id_conta and m.data_movimento > ct.data_saldo_inicial and m.removido_na_fonte_em is null
+                and not exists (select 1 from bpo_fin.movimentos_ignorados i where i.id_movimento = m.id_movimento
+                                 and i.revertido_em is null and i.categoria = 'duplicado_na_fonte')) s on true
+          where ct.id_org = $1 and ct.ativa order by ct.apelido`, [id])
+      const abertos = await q(
+        `select tipo, faixa, count(*)::int as qtd, sum(saldo) as total from bpo_fin.v_titulos_abertos where id_org = $1 group by 1, 2`, [id])
+      const serie = await q(
+        `with mov as (${mov}),
+              ini as (select coalesce(sum(saldo_inicial), 0) as si from bpo_fin.contas where id_org = $1 and ativa),
+              antes as (select coalesce(sum(v), 0) as v from mov where d < current_date - 30),
+              passado as (
+                select g::date as data, 'realizado' as tipo, coalesce(m.ent, 0) as entradas, coalesce(m.sai, 0) as saidas,
+                       (select si from ini) + (select v from antes) + sum(coalesce(m.v, 0)) over (order by g) as saldo
+                  from generate_series(current_date - 30, current_date, interval '1 day') g left join mov m on m.d = g::date),
+              proj as (select data_ref as d, sum(valor) as v, sum(valor) filter (where valor > 0) as ent, sum(valor) filter (where valor < 0) as sai
+                         from bpo_fin.v_fato where regime = 'projetado' and id_org = $1 and data_ref <= current_date + 60 group by 1),
+              futuro as (
+                select g::date as data, 'projetado' as tipo, coalesce(p.ent, 0) as entradas, coalesce(p.sai, 0) as saidas,
+                       (select saldo from passado where data = current_date) + sum(coalesce(p.v, 0)) over (order by g) as saldo
+                  from generate_series(current_date, current_date + 60, interval '1 day') g left join proj p on p.d = g::date)
+         select * from passado union all select * from futuro order by data, tipo desc`, [id])
+      const dre = await q(
+        `select competencia, linha_dre, ordem_dre, id_plano_conta, codigo, conta, natureza, valor, qtd_titulos from bpo_fin.v_dre
+          where id_org = $1 and competencia between (date_trunc('month', current_date) - interval '1 month')::date and date_trunc('month', current_date)::date`, [id])
+      const pendencias = await q(`select tipo_item, count(*)::int as qtd, coalesce(sum(abs(valor)), 0) as valor from bpo_fin.v_fila where id_org = $1 group by 1`, [id])
+      const [fech] = await q(
+        `select competencia, status from bpo_fin.fechamento_mensal where id_org = $1 order by competencia desc limit 1`, [id])
+      const [hoje] = await q(`select current_date::text as hoje`)
+      return { hoje: hoje!.hoje, contas, abertos, serie, dre, pendencias, ultimo_fechamento: fech ?? null }
+    }))
+  })
+
   // ─── lançamentos (títulos) ───────────────────────────────────────────────────────
   // Lista com filtros + resumo para os cartões. Período pela competência ou pelo vencimento.
   app.get('/orgs/:id/titulos', async (c) => {

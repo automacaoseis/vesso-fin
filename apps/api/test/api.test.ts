@@ -238,6 +238,22 @@ describe.skipIf(!url)('API × banco', () => {
     })
   })
 
+  describe('resumo', () => {
+    it('saldos, abertos, série de 92 pontos, DRE e pendências; outro usuário vê vazio', async () => {
+      const r = (await get(`/orgs/${ORG.b}/resumo`, 'analista')).json
+      expect(r.contas.length).toBeGreaterThan(0)
+      expect(r.contas[0]).toHaveProperty('saldo_sistema')
+      expect(r.serie.filter((p: any) => p.tipo === 'realizado')).toHaveLength(31)
+      expect(r.serie.filter((p: any) => p.tipo === 'projetado')).toHaveLength(61)
+      const hojeR = r.serie.find((p: any) => p.tipo === 'realizado' && p.data === r.hoje)
+      const hojeP = r.serie.find((p: any) => p.tipo === 'projetado' && p.data === r.hoje)
+      expect(hojeP.saldo).toBeCloseTo(hojeR.saldo + hojeP.entradas + hojeP.saidas)   // projetado parte do realizado de hoje
+      expect(Array.isArray(r.pendencias)).toBe(true)
+      const g = (await get(`/orgs/${ORG.b}/resumo`, 'gestor')).json
+      expect(g.contas).toEqual([])
+    })
+  })
+
   describe('relatórios', () => {
     it('DRE e detalhamento por competência; outro usuário não vê', async () => {
       const dre = (await get(`/orgs/${ORG.b}/dre?de=2026-08-01&ate=2026-09-01`, 'analista')).json

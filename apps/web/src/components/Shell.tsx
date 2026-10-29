@@ -24,12 +24,13 @@ export default function Shell({ orgs, email, tema, densidade, children }: {
   const path = usePathname()
   const m = /^\/org\/([^/]+)(?:\/([^/]+))?/.exec(path)
   const orgAtual = m ? orgs.find((o) => o.id_org === m[1]) : undefined
-  const largo = ['conciliacao', 'relatorios', 'lancamentos'].includes(m?.[2] ?? '')
+  const largo = !!orgAtual   // telas da organização usam a largura toda
   const largura = largo ? '100%' : 'var(--v-frame)'
 
   const itens: { href: string; rotulo: string; ativo: boolean }[] = orgAtual
     ? [
         { href: '/', rotulo: 'Organizações', ativo: false },
+        { href: `/org/${orgAtual.id_org}`, rotulo: 'Resumo', ativo: !m?.[2] },
         { href: `/org/${orgAtual.id_org}/conciliacao`, rotulo: 'Conciliação', ativo: m?.[2] === 'conciliacao' },
         { href: `/org/${orgAtual.id_org}/lancamentos`, rotulo: 'Lançamentos', ativo: m?.[2] === 'lancamentos' },
         { href: `/org/${orgAtual.id_org}/relatorios`, rotulo: 'Relatórios', ativo: m?.[2] === 'relatorios' },
