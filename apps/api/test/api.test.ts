@@ -192,6 +192,52 @@ describe.skipIf(!url)('API × banco', () => {
     })
   })
 
+  describe('lançamentos', () => {
+    it('lista com resumo, situação e período; outro usuário não vê', async () => {
+      const r = (await get(`/orgs/${ORG.b}/titulos?de=2026-08-01&ate=2026-12-01`, 'analista')).json
+      expect(r.titulos.length).toBeGreaterThanOrEqual(2)
+      expect(r.resumo).toMatchObject({ qtd: expect.any(Number), receber: expect.any(Number), pagar: expect.any(Number) })
+      expect(r.titulos.every((t: any) => t.cancelado_em === null)).toBe(true)
+      const aberto = (await get(`/orgs/${ORG.b}/titulos?situacao=aberto`, 'analista')).json.titulos
+      expect(aberto.every((t: any) => t.saldo > 0)).toBe(true)
+      const receber = (await get(`/orgs/${ORG.b}/titulos?tipo=receber&campo=vencimento&de=2026-09-01&ate=2026-09-01`, 'analista')).json.titulos
+      expect(receber.map((t: any) => t.descricao)).toContain('Consultas 1ª quinzena')
+      expect((await get(`/orgs/${ORG.b}/titulos`, 'gestor')).json.titulos).toEqual([])
+      expect((await get(`/orgs/${ORG.b}/titulos?situacao=xpto`, 'analista')).status).toBe(422)
+    })
+    it('detalhe traz baixas e histórico; de outra org dá 404', async () => {
+      const d = (await get(`/titulos/${TIT(1)}`, 'analista')).json
+      expect(d.titulo.descricao).toBe('Aluguel agosto')
+      expect(d.titulo).toMatchObject({ valor: 3000, saldo: expect.any(Number), valor_baixado: expect.any(Number) })
+      expect(d.baixas.length).toBeGreaterThan(0)
+      expect(d.baixas[0]).toHaveProperty('descricao_bruta')
+      expect(Array.isArray(d.eventos)).toBe(true)
+      expect((await get(`/titulos/${TIT(1)}`, 'gestor')).status).toBe(404)
+    })
+    it('criar parcelado, categorizar em lote (tudo ou nada) e cancelar', async () => {
+      const ent = (await get(`/orgs/${ORG.b}/entidades`, 'analista')).json
+      const novo = await post('/titulos', 'analista', { id_org: ORG.b, id_entidade: ent[0].id_entidade, tipo: 'pagar', descricao: 'Software anual',
+        valor: 1200, data_vencimento: '2026-11-10', competencia: '2026-11-01', parcelas: 3 })
+      expect(novo.status).toBe(200)
+      expect(novo.json.titulos).toHaveLength(3)
+      const sem = (await get(`/orgs/${ORG.b}/titulos?situacao=sem_categoria`, 'analista')).json
+      expect(sem.resumo.sem_categoria).toBeGreaterThanOrEqual(3)
+      // um id inválido (de outra org) derruba o lote inteiro
+      const ruim = await post('/titulos/categorizar-lote', 'analista', { ids: [...novo.json.titulos, '90000000-0000-0000-0000-0000000000ff'], id_plano_conta: '50000000-0000-0000-0000-000000000002' })
+      expect(ruim.status).toBe(422)
+      expect((await get(`/orgs/${ORG.b}/titulos?situacao=sem_categoria`, 'analista')).json.resumo.sem_categoria).toBe(sem.resumo.sem_categoria)
+      const okLote = await post('/titulos/categorizar-lote', 'analista', { ids: novo.json.titulos, id_plano_conta: '50000000-0000-0000-0000-000000000009' })
+      expect(okLote.json).toEqual({ ok: true, qtd: 3 })
+      expect((await get(`/orgs/${ORG.b}/titulos?situacao=generica`, 'analista')).json.titulos.length).toBeGreaterThanOrEqual(3)
+      expect((await post(`/titulos/${novo.json.titulos[2]}/cancelar`, 'analista', { motivo: 'lançado em duplicidade' })).status).toBe(200)
+      expect((await get(`/orgs/${ORG.b}/titulos?situacao=cancelado`, 'analista')).json.titulos.map((t: any) => t.id_titulo)).toContain(novo.json.titulos[2])
+      expect((await get(`/titulos/${novo.json.titulos[0]}`, 'analista')).json.eventos.length).toBeGreaterThan(0)
+    })
+    it('contrapartes com busca', async () => {
+      expect((await get(`/orgs/${ORG.b}/contrapartes?q=a`, 'analista')).status).toBe(200)
+    })
+  })
+
   describe('relatórios', () => {
     it('DRE e detalhamento por competência; outro usuário não vê', async () => {
       const dre = (await get(`/orgs/${ORG.b}/dre?de=2026-08-01&ate=2026-09-01`, 'analista')).json

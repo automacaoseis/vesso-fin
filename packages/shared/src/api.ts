@@ -70,6 +70,18 @@ export const bCriarTitulo = z.object({
   parcelas: z.number().int().min(1).max(120).default(1),
 })
 export const bCategorizar = z.object({ id_plano_conta: zId, id_centro_custo: zId.optional(), competencia: zCompetencia.optional() })
+export const SITUACOES_TITULO = ['todos', 'aberto', 'vencido', 'quitado', 'sem_categoria', 'generica', 'cancelado'] as const
+export const qTitulos = z.object({
+  tipo: z.enum(TIPOS_TITULO).optional(),
+  situacao: z.enum(SITUACOES_TITULO).default('todos'),
+  campo: z.enum(['competencia', 'vencimento']).default('competencia'),
+  de: zCompetencia.optional(), ate: zCompetencia.optional(),
+  plano: zId.optional(),
+  q: z.string().trim().max(100).optional(),
+  cursor: z.string().max(200).optional(),
+  limite: z.coerce.number().int().min(1).max(500).default(200),
+})
+export const bCategorizarLote = z.object({ ids: z.array(zId).min(1).max(500), id_plano_conta: zId, competencia: zCompetencia.optional() })
 export const bRevisar = z.object({ aprovar: z.boolean(), nota: z.string().trim().max(2000).optional() })
 export const bTempoIniciar = z.object({ id_org: zId, etapa: z.enum(ETAPAS_TEMPO), competencia: zCompetencia.optional() })
 export const bTempoParar = z.object({ nota: z.string().trim().max(1000).optional() })

@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono'
 import type pg from 'pg'
 import type { z } from 'zod'
 import {
-  ACOES, bCategorizar, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bRevisar, bTempoIniciar, bTempoParar,
+  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bRevisar, bTempoIniciar, bTempoParar,
   bTransferencia, qFato, qMovimentos, qPeriodo, qTitulosAbertos, zCompetencia, zId, type ErroApi,
 } from '@vesso-fin/shared'
 import { CABECALHO_SERVICO, verificarServico } from '@vesso-fin/shared/servico'
@@ -197,6 +197,105 @@ export function criarApp(deps: Deps) {
     const b = await corpo(c, bMotivo)
     await escrever(c, (q) => q(`select bpo_fin.fn_desconciliar($1, $2)`, [param(c, 'id'), b.motivo]))
     return c.json({ ok: true })
+  })
+
+  // ─── lançamentos (títulos) ───────────────────────────────────────────────────────
+  // Lista com filtros + resumo para os cartões. Período pela competência ou pelo vencimento.
+  app.get('/orgs/:id/titulos', async (c) => {
+    const id = param(c, 'id')
+    const f = query(c, qTitulos)
+    const cur = f.cursor ? lerCursor(f.cursor) : null
+    const busca = f.q ? `%${f.q.replace(/[\\%_]/g, (x) => '\\' + x)}%` : null
+    const data = f.campo === 'vencimento' ? 't.data_vencimento' : 't.competencia'
+    const base = `
+      from bpo_fin.titulos t
+      left join lateral (select coalesce(sum(b.valor), 0) pago from bpo_fin.baixas b where b.id_titulo = t.id_titulo and b.revertida_em is null) b on true
+      left join bpo_fin.plano_contas pc on pc.id_plano_conta = t.id_plano_conta
+      left join bpo_fin.contrapartes ct on ct.id_contraparte = t.id_contraparte
+      where t.id_org = $1 and ($2::text is null or t.tipo = $2)
+        and ($3::date is null or ${data} >= $3) and ($4::date is null or ${data} <= ($4::date + interval '1 month' - interval '1 day'))
+        and ($5::uuid is null or t.id_plano_conta = $5)
+        and ($6::text is null or t.descricao ilike $6 or ct.nome ilike $6 or t.observacao ilike $6)`
+    const sit = {
+      todos: 't.cancelado_em is null', cancelado: 't.cancelado_em is not null',
+      aberto: 't.cancelado_em is null and t.valor > b.pago', quitado: 't.cancelado_em is null and t.valor <= b.pago',
+      vencido: 't.cancelado_em is null and t.valor > b.pago and t.data_vencimento < current_date',
+      sem_categoria: 't.cancelado_em is null and t.id_plano_conta is null',
+      generica: 't.cancelado_em is null and pc.generica',
+    }[f.situacao]
+    const params = [id, f.tipo ?? null, f.de ?? null, f.ate ?? null, f.plano ?? null, busca]
+    return c.json(await ler(c, async (q) => {
+      const linhas = await q(
+        `select t.id_titulo, t.tipo, t.descricao, t.valor, b.pago as valor_baixado, t.valor - b.pago as saldo,
+                t.data_vencimento, t.competencia, t.id_plano_conta, pc.codigo, pc.nome as conta, coalesce(pc.generica, false) as generica,
+                ct.nome as contraparte, t.origem, t.observacao, t.parcela, t.total_parcelas, t.cancelado_em, ${data} as data_ref
+         ${base} and ${sit}
+           and ($7::date is null or (${data}, t.id_titulo) > ($7::date, $8::uuid))
+         order by ${data}, t.id_titulo limit $9`, [...params, cur?.d ?? null, cur?.id ?? null, f.limite + 1])
+      const [resumo] = await q(
+        `select count(*) filter (where t.cancelado_em is null) as qtd,
+                coalesce(sum(t.valor) filter (where t.cancelado_em is null and t.tipo = 'receber'), 0) as receber,
+                coalesce(sum(t.valor) filter (where t.cancelado_em is null and t.tipo = 'pagar'), 0) as pagar,
+                coalesce(sum(t.valor - b.pago) filter (where t.cancelado_em is null and t.tipo = 'receber' and t.valor > b.pago), 0) as receber_aberto,
+                coalesce(sum(t.valor - b.pago) filter (where t.cancelado_em is null and t.tipo = 'pagar' and t.valor > b.pago), 0) as pagar_aberto,
+                count(*) filter (where t.cancelado_em is null and t.id_plano_conta is null) as sem_categoria,
+                count(*) filter (where t.cancelado_em is null and pc.generica) as generica,
+                count(*) filter (where t.cancelado_em is null and t.valor > b.pago and t.data_vencimento < current_date) as vencidos
+         ${base}`, params)
+      const mais = linhas.length > f.limite
+      const pagina = mais ? linhas.slice(0, f.limite) : linhas
+      const ult = pagina.at(-1)
+      return { titulos: pagina, resumo, proximo: mais && ult ? escreverCursor(ult.data_ref, ult.id_titulo) : null }
+    }))
+  })
+
+  // Detalhe: o título, as baixas (com o movimento do extrato) e o histórico da auditoria.
+  app.get('/titulos/:id', async (c) => {
+    const id = param(c, 'id')
+    const r = await ler(c, async (q) => {
+      const [t] = await q(
+        `select t.*, pc.codigo, pc.nome as conta, coalesce(pc.generica, false) as generica, ct.nome as contraparte, en.razao_social as entidade,
+                b.pago as valor_baixado, t.valor - b.pago as saldo
+           from bpo_fin.titulos t
+           left join lateral (select coalesce(sum(x.valor), 0) pago from bpo_fin.baixas x where x.id_titulo = t.id_titulo and x.revertida_em is null) b on true
+           left join bpo_fin.plano_contas pc on pc.id_plano_conta = t.id_plano_conta
+           left join bpo_fin.contrapartes ct on ct.id_contraparte = t.id_contraparte
+           left join bpo_fin.entidades en on en.id_entidade = t.id_entidade
+          where t.id_titulo = $1`, [id])
+      if (!t) return null
+      const baixas = await q(
+        `select b.id_baixa, b.valor, b.origem, b.criado_em, b.revertida_em, b.motivo_reversao,
+                m.data_movimento, m.descricao_bruta, m.valor as valor_movimento, co.apelido as conta_bancaria
+           from bpo_fin.baixas b join bpo_fin.movimentos m on m.id_movimento = b.id_movimento
+           join bpo_fin.contas co on co.id_conta = m.id_conta
+          where b.id_titulo = $1 order by b.criado_em`, [id])
+      const eventos = await q(
+        `select acao, antes, depois, por, em from bpo_fin.log_eventos
+          where tabela = 'titulos' and id_registro = $1 order by em desc limit 50`, [id])
+      return { titulo: t, baixas, eventos }
+    })
+    if (!r) throw naoEncontrado('título')
+    return c.json(r)
+  })
+
+  // Categorizar em lote: tudo ou nada (uma transação; se um título falhar, nenhum muda).
+  app.post('/titulos/categorizar-lote', async (c) => {
+    const b = await corpo(c, bCategorizarLote)
+    await escrever(c, async (q) => {
+      for (const id of b.ids) await q(`select bpo_fin.fn_categorizar_titulo($1, $2, null, $3)`, [id, b.id_plano_conta, b.competencia ?? null])
+    })
+    return c.json({ ok: true, qtd: b.ids.length })
+  })
+
+  app.get('/orgs/:id/entidades', async (c) => c.json(await ler(c, (q) => q(
+    `select id_entidade, razao_social, nome_fantasia, cnpj from bpo_fin.entidades where id_org = $1 order by razao_social`, [param(c, 'id')]))))
+
+  app.get('/orgs/:id/contrapartes', async (c) => {
+    const busca = (c.req.query('q') ?? '').trim().slice(0, 100)
+    return c.json(await ler(c, (q) => q(
+      `select id_contraparte, nome, documento, tipo from bpo_fin.contrapartes
+        where id_org = $1 and ($2 = '' or nome ilike $3 or documento like $3) order by nome limit 30`,
+      [param(c, 'id'), busca, `%${busca.replace(/[\\%_]/g, (x) => '\\' + x)}%`])))
   })
 
   // ─── títulos ─────────────────────────────────────────────────────────────────────
