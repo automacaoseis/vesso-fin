@@ -31,3 +31,12 @@ alter table storage.objects enable row level security;
 grant usage on schema storage to authenticated, anon;
 grant select, insert, update, delete on storage.objects to authenticated;
 grant select on storage.buckets to authenticated;
+
+-- Portal do cliente (0010): o mínimo de app_seis.cliente_acessos + fn_cliente_externo_id (como em produção)
+create table app_seis.cliente_acessos (id uuid primary key default gen_random_uuid(), user_auth_id uuid not null,
+  id_cliente uuid not null references app_seis.clientes(id_cliente), tipo text not null check (tipo in ('titular', 'secretaria', 'socio')),
+  ativo boolean not null default true);
+create function app_seis.fn_cliente_externo_id() returns uuid language sql security definer stable set search_path = app_seis, public as $$
+  select ca.id_cliente from app_seis.cliente_acessos ca where ca.user_auth_id = auth.uid() and ca.ativo = true limit 1
+$$;
+grant execute on function app_seis.fn_cliente_externo_id() to authenticated;
