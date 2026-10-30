@@ -360,6 +360,29 @@ describe.skipIf(!url)('API × banco', () => {
     })
   })
 
+  describe('fila e fechamentos (todas as orgs)', () => {
+    it('fila traz id_conta nos itens de movimento', async () => {
+      const r = await get('/fila', 'analista')
+      expect(r.status).toBe(200)
+      const movs = r.json.filter((i: any) => i.tipo_item.startsWith('movimento_'))
+      expect(movs.length).toBeGreaterThan(0)
+      expect(movs.every((i: any) => i.id_conta)).toBe(true)
+      expect(r.json.filter((i: any) => !i.tipo_item.startsWith('movimento_')).every((i: any) => i.id_conta === null)).toBe(true)
+    })
+    it('fechamentos: uma linha por org visível, com resumo do checklist', async () => {
+      const r = await get('/fechamentos?competencia=2026-10-01', 'analista')
+      expect(r.status).toBe(200)
+      expect(r.json.map((o: any) => o.id_org)).toEqual([ORG.b])
+      const [o] = r.json
+      expect(o.itens).toBeGreaterThan(0)
+      expect(o.itens_ok + o.bloqueios).toBeLessThanOrEqual(o.itens)
+      expect(['aberto', 'em_revisao', 'fechado', 'liberado']).toContain(o.status)
+      expect((await get('/fechamentos?competencia=2026-10-01', 'gestor')).json).toEqual([])
+      expect((await get('/fechamentos?competencia=2026-10-15', 'analista')).status).toBe(422)
+      expect((await get('/fechamentos', 'analista')).status).toBe(422)
+    })
+  })
+
   it('rota inexistente → 404 (depois do portão)', async () => expect((await get('/nada', 'analista')).status).toBe(404))
 })
 

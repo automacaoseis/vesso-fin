@@ -56,6 +56,7 @@ export const bIgnorar = z.object({ categoria: z.enum(CATEGORIAS_IGNORADO), motiv
 export const bTransferencia = z.object({ id_mov_saida: zId, id_mov_entrada: zId })
 export const bMotivo = z.object({ motivo: zMotivoCurto })
 export const bReabrir = z.object({ motivo: zMotivo })
+export const qCompetencia = z.object({ competencia: zCompetencia })
 // Saldo da conta informado à mão (0007): conta sem extrato/API. Pode ser negativo (cheque especial, cartão).
 export const bInformarSaldo = z.object({ data: zData, saldo: zCentavos.refine((v) => Math.abs(v) < 1e12, 'saldo fora do limite') })
 export const bCriarTitulo = z.object({

@@ -2,16 +2,11 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { zId } from '@vesso-fin/shared'
 import { api, ErroDaApi } from '@/lib/api'
+import { mesAnteriorSP } from '@/lib/datas'
 import { quemEstaLogado } from '@/lib/sessao'
 import FechamentoClient, { type DetalheFech, type MesFech } from './FechamentoClient'
 
 export const metadata: Metadata = { title: 'Fechamento' }
-
-function mesAnteriorSP() {
-  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).format(new Date())
-  const d = new Date(Date.UTC(+hoje.slice(0, 4), +hoje.slice(5, 7) - 2, 1))
-  return d.toISOString().slice(0, 7)
-}
 
 export default async function Fechamento({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ mes?: string }> }) {
   const { id } = await params

@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono'
 import type pg from 'pg'
 import type { z } from 'zod'
 import {
-  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, bRevisar, bTempoIniciar, bTempoParar,
+  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, qCompetencia, bRevisar, bTempoIniciar, bTempoParar,
   bTransferencia, qFato, qMovimentos, qPeriodo, qTitulosAbertos, zCompetencia, zId, type ErroApi,
 } from '@vesso-fin/shared'
 import { CABECALHO_SERVICO, verificarServico } from '@vesso-fin/shared/servico'
@@ -476,7 +476,29 @@ export function criarApp(deps: Deps) {
   })
 
   // ─── painéis ─────────────────────────────────────────────────────────────────────
-  app.get('/fila', async (c) => c.json(await ler(c, (q) => q(`select * from bpo_fin.v_fila order by peso desc, desde limit 500`))))
+  // id_conta do movimento: a tela abre a Conciliação já na conta e no mês do item.
+  app.get('/fila', async (c) => c.json(await ler(c, (q) => q(
+    `select f.*, m.id_conta from bpo_fin.v_fila f
+       left join bpo_fin.movimentos m on f.tipo_item like 'movimento\\_%' and m.id_movimento::text = f.id_ref
+      order by f.peso desc, f.desde limit 500`))))
+
+  // Fechamentos de todas as orgs visíveis numa competência: status + resumo do checklist (bloqueios) + turma.
+  app.get('/fechamentos', async (c) => {
+    const { competencia: comp } = query(c, qCompetencia)
+    return c.json(await ler(c, (q) => q(
+      `select o.id_org, o.nome, o.tipo, o.status as status_org, o.competencia_inicial, o.turma_fechamento, t.dia_util_limite,
+              coalesce(f.status, 'aberto') as status, f.executor, f.enviado_revisao_em, f.revisor, f.revisado_em,
+              f.liberado_em, coalesce(f.reaberturas, 0) as reaberturas,
+              ck.total::int as itens, ck.ok::int as itens_ok, ck.bloqueios::int as bloqueios
+         from bpo_fin.organizacoes o
+         left join bpo_fin.turmas_fechamento t on t.codigo = o.turma_fechamento
+         left join bpo_fin.fechamento_mensal f on f.id_org = o.id_org and f.competencia = $1
+         cross join lateral (select count(*) as total, count(*) filter (where k.ok) as ok,
+                                    count(*) filter (where k.bloqueia and not k.ok) as bloqueios
+                               from bpo_fin.fn_checklist_fechamento(o.id_org, $1) k) ck
+        where o.status in ('onboarding', 'ativa')
+        order by o.tipo desc, o.nome`, [comp])))
+  })
 
   app.get('/conexoes', async (c) => c.json(await ler(c, (q) => q(
     `select s.*, o.nome as organizacao, bpo_fin.fn_pode(s.id_org, 'importar') as pode_importar

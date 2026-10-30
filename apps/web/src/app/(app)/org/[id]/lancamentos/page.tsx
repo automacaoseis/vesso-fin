@@ -38,6 +38,7 @@ export default async function Lancamentos({ params, searchParams }: {
   ])
   const { limite: _l, ...filtros } = f
   void _l
-  return <LancamentosClient key={JSON.stringify(filtros)} org={{ id: org.id_org, nome: org.nome, acoes: org.acoes }}
-    filtros={filtros} inicial={pagina} plano={plano} entidades={entidades} mesAtual={`${atual}-01`} />
+  return <LancamentosClient key={JSON.stringify(filtros) + (sp.titulo ?? '')} org={{ id: org.id_org, nome: org.nome, acoes: org.acoes }}
+    filtros={filtros} inicial={pagina} plano={plano} entidades={entidades} mesAtual={`${atual}-01`}
+    abrir={zId.safeParse(sp.titulo).success ? sp.titulo : undefined} />
 }

@@ -34,15 +34,16 @@ function situacao(t: TituloLinha) {
   return { icone: '○', texto: 'Em aberto', cor: theme.text2 }
 }
 
-export default function LancamentosClient({ org, filtros, inicial, plano, entidades, mesAtual }: {
+export default function LancamentosClient({ org, filtros, inicial, plano, entidades, mesAtual, abrir }: {
   org: { id: string; nome: string; acoes: string[] }; filtros: Filtros; inicial: Pagina; plano: ContaPlano[]; entidades: Entidade[]; mesAtual: string
+  abrir?: string  // ?titulo= vindo da Fila: abre a gaveta direto
 }) {
   const router = useRouter()
   const pode = (a: string) => org.acoes.includes(a)
   const [extras, setExtras] = useState<TituloLinha[]>([])
   const [proximo, setProximo] = useState(inicial.proximo)
   const [sel, setSel] = useState<string[]>([])
-  const [aberto, setAberto] = useState<string | null>(null)
+  const [aberto, setAberto] = useState<string | null>(abrir ?? null)
   const [novo, setNovo] = useState(false)
   const [aviso, setAviso] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
   const [busca, setBusca] = useState(filtros.q ?? '')

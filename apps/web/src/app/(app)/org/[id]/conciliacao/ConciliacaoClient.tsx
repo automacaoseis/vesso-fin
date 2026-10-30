@@ -44,9 +44,10 @@ function digitando(e: KeyboardEvent) {
   return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)
 }
 
-export default function ConciliacaoClient({ org, contas, plano, mes, filtros, inicial }: {
+export default function ConciliacaoClient({ org, contas, plano, mes, filtros, inicial, focoInicial }: {
   org: { id: string; nome: string; acoes: string[] }
   contas: Conta[]; plano: PlanoConta[]; mes: string; filtros: Filtros; inicial: Dados
+  focoInicial?: string  // ?mov= vindo da Fila
 }) {
   const router = useRouter()
   const pode = (a: string) => org.acoes.includes(a)
@@ -57,7 +58,7 @@ export default function ConciliacaoClient({ org, contas, plano, mes, filtros, in
   const [titulos, setTitulos] = useState(inicial.titulos)
   const [busca, setBusca] = useState('')
   const [buscaTit, setBuscaTit] = useState('')
-  const [focoId, setFocoId] = useState<string | null>(inicial.pagina.movimentos.find(ABERTO)?.id_movimento ?? inicial.pagina.movimentos[0]?.id_movimento ?? null)
+  const [focoId, setFocoId] = useState<string | null>(inicial.pagina.movimentos.find((m) => m.id_movimento === focoInicial)?.id_movimento ?? inicial.pagina.movimentos.find(ABERTO)?.id_movimento ?? inicial.pagina.movimentos[0]?.id_movimento ?? null)
   const [selMov, setSelMov] = useState<string[]>([])
   const [selTit, setSelTit] = useState<string[]>([])
   const [daSugestao, setDaSugestao] = useState(false)

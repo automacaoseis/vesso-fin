@@ -38,6 +38,8 @@ export default function Shell({ orgs, email, tema, densidade, children }: {
         { href: '/conexoes', rotulo: 'Conexões', ativo: false },
       ]
     : [
+        { href: '/fila', rotulo: 'Fila', ativo: path.startsWith('/fila') },
+        { href: '/fechamentos', rotulo: 'Fechamentos', ativo: path.startsWith('/fechamentos') },
         { href: '/', rotulo: 'Organizações', ativo: path === '/' },
         { href: '/conexoes', rotulo: 'Conexões', ativo: path.startsWith('/conexoes') },
       ]

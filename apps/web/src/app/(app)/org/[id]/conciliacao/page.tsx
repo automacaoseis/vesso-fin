@@ -22,7 +22,7 @@ function limitesMes(mes: string): { de: string; ate: string } {
 
 export default async function Conciliacao({ params, searchParams }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ conta?: string; mes?: string; status?: string }>
+  searchParams: Promise<{ conta?: string; mes?: string; status?: string; mov?: string }>
 }) {
   const { id } = await params
   if (!zId.safeParse(id).success) notFound()
@@ -52,10 +52,11 @@ export default async function Conciliacao({ params, searchParams }: {
     <>
     <Cronometro idOrg={org.id_org} />
     <ConciliacaoClient
-      key={`${conta}|${mes}|${status ?? ''}`}
+      key={`${conta}|${mes}|${status ?? ''}|${sp.mov ?? ''}`}
       org={{ id: org.id_org, nome: org.nome, acoes: org.acoes }}
       contas={contas} plano={plano} mes={mes} filtros={filtros}
       inicial={{ pagina, titulos }}
+      focoInicial={zId.safeParse(sp.mov).success ? sp.mov : undefined}
     />
     </>
   )
