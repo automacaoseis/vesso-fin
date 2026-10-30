@@ -35,12 +35,14 @@ export default function Shell({ orgs, ehDono, email, tema, densidade, children }
         { href: `/org/${orgAtual.id_org}/lancamentos`, rotulo: 'Lançamentos', ativo: m?.[2] === 'lancamentos' },
         { href: `/org/${orgAtual.id_org}/vencimentos`, rotulo: 'A pagar e receber', ativo: m?.[2] === 'vencimentos' },
         { href: `/org/${orgAtual.id_org}/relatorios`, rotulo: 'Relatórios', ativo: m?.[2] === 'relatorios' },
+        { href: `/org/${orgAtual.id_org}/documentos`, rotulo: 'Documentos', ativo: m?.[2] === 'documentos' },
         { href: `/org/${orgAtual.id_org}/fechamento`, rotulo: 'Fechamento', ativo: m?.[2] === 'fechamento' },
         { href: '/conexoes', rotulo: 'Conexões', ativo: false },
       ]
     : [
         { href: '/fila', rotulo: 'Fila', ativo: path.startsWith('/fila') },
         { href: '/fechamentos', rotulo: 'Fechamentos', ativo: path.startsWith('/fechamentos') },
+        { href: '/pendencias', rotulo: 'Pendências', ativo: path.startsWith('/pendencias') },
         { href: '/', rotulo: 'Organizações', ativo: path === '/' },
         { href: '/conexoes', rotulo: 'Conexões', ativo: path.startsWith('/conexoes') },
         { href: '/equipe', rotulo: 'Equipe', ativo: path.startsWith('/equipe') },

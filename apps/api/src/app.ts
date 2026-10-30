@@ -2,23 +2,25 @@ import { Hono, type Context } from 'hono'
 import type pg from 'pg'
 import type { z } from 'zod'
 import {
-  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, qCompetencia, bConcederAcesso, bRevisar, bTempoIniciar, bTempoParar,
+  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, qCompetencia, bConcederAcesso, bPedirDocumento, bValidarDocumento, qDocumentos, bRevisar, bTempoIniciar, bTempoParar,
   bTransferencia, qFato, qMovimentos, qPeriodo, qTitulosAbertos, zCompetencia, zId, type ErroApi,
 } from '@vesso-fin/shared'
 import { CABECALHO_SERVICO, verificarServico } from '@vesso-fin/shared/servico'
 import { AuthIndisponivel, TokenInvalido, type Claims, type VerificarToken } from './auth'
 import { comoUsuario, type Consulta } from './db'
 import { ErroHttp, erroDoBanco } from './erros'
+import type { Storage } from './storage'
 
 export interface Deps {
   pool: pg.Pool
   verificarToken: VerificarToken
   segredoServico: string
   agora?: () => number
+  storage?: Storage      // ausente = documentos com arquivo indisponíveis (503)
   log?: (linha: Record<string, unknown>) => void
 }
 
-type Vars = { Variables: { claims: Claims; corpo: Uint8Array } }
+type Vars = { Variables: { claims: Claims; corpo: Uint8Array; token: string } }
 
 /** Teto de corpo: OFX até 5 MB + folga do multipart. Checado ANTES de ler (a assinatura lê o corpo todo). */
 const MAX_CORPO = 6 * 1024 * 1024
@@ -53,6 +55,7 @@ export function criarApp(deps: Deps) {
     if (!m) throw new ErroHttp(401, { erro: 'nao_autenticado', mensagem: 'sem sessão' })
     try {
       c.set('claims', await deps.verificarToken(m[1]!))
+      c.set('token', m[1]!)  // o Storage (documentos) é chamado com o JWT do próprio usuário
     } catch (e) {
       if (e instanceof TokenInvalido) throw new ErroHttp(401, { erro: 'nao_autenticado', mensagem: 'sessão inválida ou expirada' })
       if (e instanceof AuthIndisponivel) {
@@ -563,6 +566,84 @@ export function criarApp(deps: Deps) {
       throw new ErroHttp(403, { erro: 'sem_permissao', mensagem: 'só o dono vê a conferência da Seis' })
     return q(`select * from bpo_fin.v_conferencia_dre_seis order by organizacao, competencia`)   // uma linha por org casa × mês (0006)
   })))
+
+  // ─── documentos (0009) ───────────────────────────────────────────────────────────
+  const COLS_DOC = `d.id_documento, d.id_org, d.id_titulo, t.descricao as titulo, d.tipo, d.competencia, d.descricao, d.status,
+         d.arquivo_nome, d.arquivo_bytes, d.arquivo_mime, d.storage_path is not null as tem_arquivo, d.motivo_recusa,
+         d.pedido_em, d.pedido_por, d.recebido_em, d.recebido_por, d.validado_por, d.created_at`
+  app.get('/orgs/:id/documentos', async (c) => {
+    const f = query(c, qDocumentos)
+    return c.json(await ler(c, (q) => q(
+      `select ${COLS_DOC} from bpo_fin.documentos d left join bpo_fin.titulos t on t.id_titulo = d.id_titulo
+        where d.id_org = $1 and ($2::text is null or d.status = $2) and ($3::date is null or d.competencia = $3)
+        order by (d.status = 'pedido') desc, coalesce(d.recebido_em, d.pedido_em, d.created_at) desc limit 500`,
+      [param(c, 'id'), f.status ?? null, f.competencia ?? null])))
+  })
+
+  // Pendências de todas as orgs visíveis: pedidos sem arquivo e recebidos aguardando validação.
+  app.get('/pendencias', async (c) => c.json(await ler(c, (q) => q(
+    `select ${COLS_DOC}, o.nome as organizacao from bpo_fin.documentos d
+       join bpo_fin.organizacoes o on o.id_org = d.id_org
+       left join bpo_fin.titulos t on t.id_titulo = d.id_titulo
+      where d.status in ('pedido', 'recebido') and o.status in ('onboarding', 'ativa')
+      order by (d.status = 'pedido') desc, coalesce(d.pedido_em, d.recebido_em) limit 500`))))
+
+  app.post('/orgs/:id/documentos/pedir', async (c) => {
+    const b = await corpo(c, bPedirDocumento)
+    const [r] = await escrever(c, (q) => q(`select bpo_fin.fn_pedir_documento($1, $2, $3, $4, $5) as id`,
+      [param(c, 'id'), b.tipo, b.descricao, b.competencia ?? null, b.id_titulo ?? null]))
+    return c.json({ ok: true, id: r!.id })
+  })
+
+  // Arquivo (multipart): campo "arquivo" + id_documento (atende um pedido) OU tipo/descricao/competencia/id_titulo (avulso).
+  // Sobe para o Storage com o JWT do usuário (a policy confere 'importar' na org) e depois registra no banco.
+  app.post('/orgs/:id/documentos', async (c) => {
+    const idOrg = param(c, 'id')
+    if (!deps.storage) throw new ErroHttp(503, { erro: 'interno', mensagem: 'armazenamento de arquivos não configurado na API' })
+    let form: FormData
+    try { form = await new Response(c.get('corpo'), { headers: { 'content-type': c.req.header('content-type') ?? '' } }).formData() }
+    catch { throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'envie o arquivo no campo "arquivo"' }) }
+    const arquivo = form.get('arquivo')
+    if (!(arquivo instanceof File) || arquivo.size === 0) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'envie o arquivo no campo "arquivo"' })
+    const texto = (k: string) => { const v = form.get(k); return typeof v === 'string' && v.trim() ? v.trim() : undefined }
+    const idDoc = texto('id_documento')
+    if (idDoc && !zId.safeParse(idDoc).success) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'id_documento inválido' })
+    const avulso = idDoc ? null : bPedirDocumento.safeParse({ tipo: texto('tipo'), descricao: texto('descricao'), competencia: texto('competencia'), id_titulo: texto('id_titulo') })
+    if (avulso && !avulso.success) throw invalido(avulso.error)
+    const nome = arquivo.name.normalize('NFC').replace(/[^\p{L}\p{N}._ -]+/gu, '_').slice(-120) || 'arquivo'
+    const pasta = (avulso?.data?.competencia ?? new Date().toISOString()).slice(0, 7)
+    const caminho = `${idOrg}/${pasta}/${crypto.randomUUID()}-${nome}`
+    await deps.storage.enviar(c.get('token'), caminho, new Uint8Array(await arquivo.arrayBuffer()), arquivo.type)
+    if (idDoc) {
+      await escrever(c, (q) => q(`select bpo_fin.fn_anexar_documento($1, $2, $3, $4, $5)`, [idDoc, caminho, arquivo.name, arquivo.size, arquivo.type]))
+      return c.json({ ok: true, id: idDoc }, 201)
+    }
+    const b = avulso!.data!
+    const [r] = await escrever(c, (q) => q(`select bpo_fin.fn_registrar_documento($1, $2, $3, $4, $5, $6, $7, $8, $9) as id`,
+      [idOrg, b.tipo, b.descricao, b.competencia ?? null, b.id_titulo ?? null, caminho, arquivo.name, arquivo.size, arquivo.type]))
+    return c.json({ ok: true, id: r!.id }, 201)
+  })
+
+  // Link assinado de 2 minutos (a leitura também passa pela policy do bucket).
+  app.get('/documentos/:id/arquivo', async (c) => {
+    if (!deps.storage) throw new ErroHttp(503, { erro: 'interno', mensagem: 'armazenamento de arquivos não configurado na API' })
+    const [d] = await ler(c, (q) => q<{ storage_path: string | null }>(`select storage_path from bpo_fin.documentos where id_documento = $1`, [param(c, 'id')]))
+    if (!d) throw new ErroHttp(404, { erro: 'nao_encontrado', mensagem: 'documento não encontrado' })
+    if (!d.storage_path) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'este documento ainda não tem arquivo' })
+    return c.json({ url: await deps.storage.assinar(c.get('token'), d.storage_path, 120) })
+  })
+
+  app.post('/documentos/:id/validar', async (c) => {
+    const b = await corpo(c, bValidarDocumento)
+    await escrever(c, (q) => q(`select bpo_fin.fn_validar_documento($1, $2, $3)`, [param(c, 'id'), b.aprovar, b.motivo ?? null]))
+    return c.json({ ok: true })
+  })
+
+  app.post('/documentos/:id/dispensar', async (c) => {
+    const b = await corpo(c, bMotivo)
+    await escrever(c, (q) => q(`select bpo_fin.fn_dispensar_documento($1, $2)`, [param(c, 'id'), b.motivo]))
+    return c.json({ ok: true })
+  })
 
   // Upload de OFX (multipart, campo "arquivo"). Grava o bronze e enfileira o processamento — quem lê o
   // arquivo é o worker. O sha256 é calculado no banco; mesmo arquivo de novo volta com duplicado=true.

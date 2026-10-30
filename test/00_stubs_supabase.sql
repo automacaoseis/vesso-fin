@@ -17,3 +17,17 @@ create schema app_seis;
 create table app_seis.clientes (id_cliente uuid primary key, nome_principal text);
 create schema core_seis;
 create table core_seis.dim_calendario (data date primary key, dia_util boolean, inicio_mes date, fim_mes date);
+
+-- Storage (0009): o mínimo para as policies do bucket bpo-fin
+create schema if not exists storage;
+create table storage.buckets (id text primary key, name text not null, public boolean default false,
+  file_size_limit bigint, allowed_mime_types text[]);
+create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id),
+  name text not null, owner uuid, created_at timestamptz default now(), unique (bucket_id, name));
+create function storage.foldername(name text) returns text[] language sql immutable as $$
+  select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]
+$$;
+alter table storage.objects enable row level security;
+grant usage on schema storage to authenticated, anon;
+grant select, insert, update, delete on storage.objects to authenticated;
+grant select on storage.buckets to authenticated;

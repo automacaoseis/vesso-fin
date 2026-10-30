@@ -64,6 +64,7 @@ export default function FechamentoClient({ org, mes, meses, detalhe, eu, contas 
     if (item === 'títulos sem categoria') return `/org/${org.id}/lancamentos?situacao=sem_categoria&de=${ym}&ate=${ym}`
     if (item.startsWith('títulos em conta genérica')) return `/org/${org.id}/lancamentos?situacao=generica&de=${ym}&ate=${ym}`
     if (item.startsWith('saldo conferido')) return '/conexoes'
+    if (item === 'documentos pedidos e não recebidos') return `/org/${org.id}/documentos?status=pedido&competencia=${ym}`
     return null
   }
 

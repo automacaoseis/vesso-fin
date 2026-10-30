@@ -15,6 +15,12 @@ const U = {
   gestor: '00000000-0000-0000-0000-0000000000c1',
 }
 const ORG = { casa: '20000000-0000-0000-0000-00000000000a', b: '20000000-0000-0000-0000-00000000000b', c: '20000000-0000-0000-0000-00000000000c' }
+// Storage em memória: as policies do bucket são testadas no SQL (test/70); aqui só o caminho e o token que chegam.
+const arquivos = new Map<string, { token: string; bytes: number; mime: string }>()
+const storageFalso = {
+  async enviar(token: string, caminho: string, bytes: Uint8Array, mime: string) { arquivos.set(caminho, { token, bytes: bytes.byteLength, mime }) },
+  async assinar(_t: string, caminho: string, s: number) { return `https://storage.teste/${caminho}?exp=${s}` },
+}
 const MOV = (n: number) => `80000000-0000-0000-0000-00000000000${n}`
 const TIT = (n: number) => `90000000-0000-0000-0000-00000000000${n}`
 
@@ -44,7 +50,7 @@ describe.skipIf(!url)('API × banco', () => {
     const par = await generateKeyPair('ES256')
     chave = par.privateKey
     const jwk = { ...(await exportJWK(par.publicKey)), kid: 'k1', alg: 'ES256' }
-    app = criarApp({ pool, verificarToken: verificadorJwt(createLocalJWKSet({ keys: [jwk] }), ISS), segredoServico: SEGREDO, log: () => {} })
+    app = criarApp({ pool, verificarToken: verificadorJwt(createLocalJWKSet({ keys: [jwk] }), ISS), segredoServico: SEGREDO, log: () => {}, storage: storageFalso })
     for (const [nome, sub] of Object.entries(U)) tokens[nome] = await token(sub)
     const [{ u }] = (await pool.query('select current_user u')).rows
     expect(u).toBe('vesso_fin_api')   // garante que o teste não roda como superusuário
@@ -407,6 +413,54 @@ describe.skipIf(!url)('API × banco', () => {
       const ids = new Set([...r.json.tempo, ...r.json.agora].map((x: any) => x.user_auth_id))
       expect(r.json.pessoas.every((p: any) => ids.has(p.user_auth_id) && p.email)).toBe(true)
       expect((await get('/equipe?de=2026-01-15&ate=2026-12-01', 'analista')).status).toBe(422)
+    })
+  })
+
+  describe('0009: documentos', () => {
+    async function subir(quem: string, campos: Record<string, string>, nome = 'nf setembro.pdf') {
+      const form = new FormData()
+      form.set('arquivo', new File(['%PDF-1.4 teste'], nome, { type: 'application/pdf' }))
+      for (const [k, v] of Object.entries(campos)) form.set(k, v)
+      const req = new Request('http://x', { method: 'POST', body: form })
+      const bytes = new Uint8Array(await req.arrayBuffer())
+      const caminho = `/orgs/${ORG.b}/documentos`
+      const r = await app.request(caminho, { method: 'POST', body: bytes, headers: {
+        'content-type': req.headers.get('content-type')!, authorization: `Bearer ${tokens[quem]}`,
+        'x-vesso-service': assinarServico(SEGREDO, 'POST', caminho, bytes),
+      } })
+      return { status: r.status, json: (await r.json()) as any }
+    }
+    it('pedir → anexar → recusar → anexar → validar; avulso; dispensar; pendências', async () => {
+      const p = await post(`/orgs/${ORG.b}/documentos/pedir`, 'analista', { tipo: 'nf', descricao: 'NF do aluguel', competencia: '2026-09-20' })
+      expect(p.status).toBe(200)
+      expect((await post(`/orgs/${ORG.b}/documentos/pedir`, 'gestor', { tipo: 'nf', descricao: 'sem acesso' })).status).toBe(403)
+      expect((await post(`/orgs/${ORG.b}/documentos/pedir`, 'analista', { tipo: 'selfie', descricao: 'tipo ruim' })).status).toBe(422)
+      expect((await get('/pendencias', 'analista')).json.some((d: any) => d.id_documento === p.json.id && d.organizacao)).toBe(true)
+
+      const a = await subir('analista', { id_documento: p.json.id })
+      expect(a.status).toBe(201)
+      const caminho = [...arquivos.keys()].at(-1)!
+      expect(caminho).toMatch(new RegExp(`^${ORG.b}/\\d{4}-\\d{2}/[0-9a-f-]{36}-nf setembro\\.pdf$`))
+      expect(arquivos.get(caminho)!.token).toBe(tokens.analista)          // sobe com o JWT do usuário
+      const lista = (await get(`/orgs/${ORG.b}/documentos?status=recebido`, 'analista')).json
+      expect(lista.find((d: any) => d.id_documento === p.json.id)).toMatchObject({ tem_arquivo: true, arquivo_nome: 'nf setembro.pdf', arquivo_mime: 'application/pdf' })
+      expect(lista[0]).not.toHaveProperty('storage_path')
+      expect((await get(`/documentos/${p.json.id}/arquivo`, 'analista')).json.url).toContain(caminho)
+
+      expect((await post(`/documentos/${p.json.id}/validar`, 'revisor', { aprovar: false, motivo: 'ilegível' })).status).toBe(200)
+      expect((await get(`/documentos/${p.json.id}/arquivo`, 'analista')).status).toBe(422)
+      expect((await subir('analista', { id_documento: p.json.id })).status).toBe(201)
+      expect((await post(`/documentos/${p.json.id}/validar`, 'revisor', { aprovar: true })).status).toBe(200)
+      expect((await post(`/documentos/${p.json.id}/validar`, 'revisor', { aprovar: true })).status).toBe(422)
+
+      const av = await subir('analista', { tipo: 'boleto', descricao: 'Boleto do contador', competencia: '2026-10-05' }, 'boleto.pdf')
+      expect(av.status).toBe(201)
+      expect([...arquivos.keys()].at(-1)).toMatch(new RegExp(`^${ORG.b}/2026-10/`))
+      expect((await subir('analista', { tipo: 'boleto' })).status).toBe(422)          // avulso sem descrição
+
+      const d = await post(`/orgs/${ORG.b}/documentos/pedir`, 'analista', { tipo: 'contrato', descricao: 'pedido errado' })
+      expect((await post(`/documentos/${d.json.id}/dispensar`, 'analista', { motivo: 'pedido por engano' })).status).toBe(200)
+      expect((await get(`/orgs/${ORG.b}/documentos`, 'analista')).json.some((x: any) => x.id_documento === d.json.id)).toBe(false)
     })
   })
 

@@ -1,4 +1,5 @@
-// SÓ PARA TESTE LOCAL. Imita o mínimo do Supabase Auth: JWKS, login por senha, refresh e logout,
+// SÓ PARA TESTE LOCAL. Imita o mínimo do Supabase Auth: JWKS, login por senha, refresh e logout — e do Storage
+// (enviar, assinar e baixar do bucket, em memória, SEM as policies: essas são testadas no SQL, test/70),
 // assinando ES256 como o projeto real. Os usuários são os do seed (apps/api/test/seed.sql), senha "senha".
 // Uso: pnpm --filter @vesso-fin/api exec tsx scripts/auth-falso.ts · SUPABASE_URL=http://localhost:9999 na API e no web.
 import { createServer } from 'node:http'
@@ -12,6 +13,7 @@ const USUARIOS: Record<string, string> = {
   'gestor_trafego@x': '00000000-0000-0000-0000-0000000000c1',
 }
 
+const ARQUIVOS = new Map<string, { bytes: Buffer; mime: string }>()
 const { privateKey, publicKey } = await generateKeyPair('ES256')
 const jwk = { ...(await exportJWK(publicKey)), kid: 'local-1', alg: 'ES256', use: 'sig' }
 const sessao = async (email: string) => ({
@@ -23,8 +25,10 @@ const sessao = async (email: string) => ({
 
 createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', BASE)
-  let corpo = ''
-  for await (const c of req) corpo += c
+  const partes: Buffer[] = []
+  for await (const c of req) partes.push(c as Buffer)
+  const bruto = Buffer.concat(partes)
+  const corpo = bruto.toString()
   const json = (s: number, b: unknown) => { res.writeHead(s, { 'content-type': 'application/json' }); res.end(JSON.stringify(b)) }
   if (url.pathname === '/auth/v1/.well-known/jwks.json') return json(200, { keys: [jwk] })
   if (url.pathname === '/auth/v1/token' && req.method === 'POST') {
@@ -35,5 +39,20 @@ createServer(async (req, res) => {
     return USUARIOS[email] ? json(200, await sessao(email)) : json(400, { error: 'invalid_grant' })
   }
   if (url.pathname === '/auth/v1/logout') { res.writeHead(204); return res.end() }
+  const sto = /^\/storage\/v1\/object\/(sign\/|baixar\/)?([^/]+)\/(.+)$/.exec(url.pathname)
+  if (sto) {
+    const chave = `${sto[2]}/${decodeURIComponent(sto[3]!)}`
+    if (!sto[1] && req.method === 'POST') {
+      if (ARQUIVOS.has(chave)) return json(400, { statusCode: '409', message: 'The resource already exists' })
+      ARQUIVOS.set(chave, { bytes: bruto, mime: req.headers['content-type'] ?? 'application/octet-stream' })
+      return json(200, { Key: chave })
+    }
+    if (sto[1] === 'sign/') return ARQUIVOS.has(chave) ? json(200, { signedURL: `/object/baixar/${sto[2]}/${sto[3]}?token=falso` }) : json(400, { statusCode: '404', message: 'Object not found' })
+    if (sto[1] === 'baixar/') {
+      const a = ARQUIVOS.get(chave)
+      if (!a) return json(404, {})
+      res.writeHead(200, { 'content-type': a.mime }); return res.end(a.bytes)
+    }
+  }
   json(404, {})
 }).listen(PORTA, () => console.log(`auth falso em ${BASE}`))

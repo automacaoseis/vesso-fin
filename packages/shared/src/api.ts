@@ -57,6 +57,17 @@ export const bTransferencia = z.object({ id_mov_saida: zId, id_mov_entrada: zId 
 export const bMotivo = z.object({ motivo: zMotivoCurto })
 export const bReabrir = z.object({ motivo: zMotivo })
 export const qCompetencia = z.object({ competencia: zCompetencia })
+// Documentos (0009)
+export const TIPOS_DOCUMENTO = ['nf', 'boleto', 'comprovante', 'contrato', 'extrato', 'guia_imposto', 'outro'] as const
+export const STATUS_DOCUMENTO = ['pedido', 'recebido', 'validado'] as const
+export const bPedirDocumento = z.object({
+  tipo: z.enum(TIPOS_DOCUMENTO),
+  descricao: z.string().trim().min(3, 'descreva o documento').max(300),
+  competencia: zData.optional(),          // qualquer dia do mês; o banco guarda o dia 1
+  id_titulo: zId.optional(),
+})
+export const bValidarDocumento = z.object({ aprovar: z.boolean(), motivo: z.string().trim().max(1000).optional() })
+export const qDocumentos = z.object({ status: z.enum(STATUS_DOCUMENTO).optional(), competencia: zCompetencia.optional() })
 // Acessos (0008): id_org nulo = todas as orgs cliente (só o dono concede).
 export const bConcederAcesso = z.object({
   email: z.string().trim().toLowerCase().max(320).regex(/^[^\s@]+@[^\s@]+$/, 'e-mail inválido'),  // existência quem confere é o banco
