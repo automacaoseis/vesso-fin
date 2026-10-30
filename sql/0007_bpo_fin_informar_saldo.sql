@@ -4,6 +4,7 @@
 -- nunca passava e o mês da org ficava preso para sempre. Entrada é RPC com checagem de ação, como o resto.
 -- Regras: ação 'conciliar'; mês travado recusa; saldo vindo de extrato/API não é sobrescrito à mão (a fonte vence);
 -- quem informou fica gravado, e some quando a fonte passa a mandar o saldo daquela data.
+-- Aplicada em produção em 30/10/2026 como 20261030112211_bpo_fin_0007_informar_saldo.
 begin;
 
 alter table bpo_fin.saldos_extrato
