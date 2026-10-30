@@ -24,11 +24,12 @@ export default async function Fechamento({ params, searchParams }: { params: Pro
   }
   // padrão: o mês anterior (é o que se fecha no começo do mês)
   const mes = mesQ && /^\d{4}-(0[1-9]|1[0-2])$/.test(mesQ) ? mesQ : mesAnteriorSP()
-  const [meses, detalhe, quem] = await Promise.all([
+  const [meses, detalhe, quem, contas] = await Promise.all([
     api.get<MesFech[]>(`/orgs/${id}/fechamentos`),
     api.get<DetalheFech>(`/orgs/${id}/fechamentos/${mes}-01`),
     quemEstaLogado(),
+    api.get<{ id_conta: string; apelido: string }[]>(`/orgs/${id}/contas`),
   ])
   return <FechamentoClient key={mes} org={{ id: org.id_org, nome: org.nome, acoes: org.acoes, competenciaInicial: org.competencia_inicial }}
-    mes={`${mes}-01`} meses={meses} detalhe={detalhe} eu={quem?.sub ?? null} />
+    mes={`${mes}-01`} meses={meses} detalhe={detalhe} eu={quem?.sub ?? null} contas={contas} />
 }

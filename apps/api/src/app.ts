@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono'
 import type pg from 'pg'
 import type { z } from 'zod'
 import {
-  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bRevisar, bTempoIniciar, bTempoParar,
+  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, bRevisar, bTempoIniciar, bTempoParar,
   bTransferencia, qFato, qMovimentos, qPeriodo, qTitulosAbertos, zCompetencia, zId, type ErroApi,
 } from '@vesso-fin/shared'
 import { CABECALHO_SERVICO, verificarServico } from '@vesso-fin/shared/servico'
@@ -190,6 +190,13 @@ export function criarApp(deps: Deps) {
   app.post('/transferencias/:id/desfazer', async (c) => {
     const b = await corpo(c, bMotivo)
     await escrever(c, (q) => q(`select bpo_fin.fn_desfazer_transferencia($1, $2)`, [param(c, 'id'), b.motivo]))
+    return c.json({ ok: true })
+  })
+
+  // Conta sem extrato nem API (PayPal, aplicação): o saldo do fim do mês entra à mão para o checklist do fechamento (0007).
+  app.post('/contas/:id/saldos', async (c) => {
+    const b = await corpo(c, bInformarSaldo)
+    await escrever(c, (q) => q(`select bpo_fin.fn_informar_saldo($1, $2, $3)`, [param(c, 'id'), b.data, b.saldo]))
     return c.json({ ok: true })
   })
 

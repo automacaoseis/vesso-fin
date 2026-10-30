@@ -30,8 +30,9 @@ const ETAPAS: { s: Status; rotulo: string }[] = [{ s: 'aberto', rotulo: 'Aberto'
 const ROT_STATUS: Record<Status, string> = { aberto: 'Aberto', em_revisao: 'Em revisão', fechado: 'Fechado', liberado: 'Liberado' }
 const ICONE_STATUS: Record<Status, string> = { aberto: '○', em_revisao: '◐', fechado: '✓', liberado: '✓' }
 
-export default function FechamentoClient({ org, mes, meses, detalhe, eu }: {
+export default function FechamentoClient({ org, mes, meses, detalhe, eu, contas }: {
   org: { id: string; nome: string; acoes: string[]; competenciaInicial: string | null }; mes: string; meses: MesFech[]; detalhe: DetalheFech; eu: string | null
+  contas: { id_conta: string; apelido: string }[]
 }) {
   const router = useRouter()
   const pode = (a: string) => org.acoes.includes(a)
@@ -132,17 +133,21 @@ export default function FechamentoClient({ org, mes, meses, detalhe, eu }: {
       <div className="v-stack" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(320px,1fr)', gap: 16, alignItems: 'start' }}>
         <Painel aria-label="Checklist" rotulo={`Checklist · ${detalhe.checklist.filter((c) => c.ok).length} de ${detalhe.checklist.length} ok`}>
           {detalhe.checklist.map((c) => {
-            const href = !c.ok ? atalho(c.item) : null
+            // saldo de conta: dá para informar aqui mesmo (conta sem extrato/API — PayPal, aplicação); o link é o caminho da fonte
+            const conta = !c.ok && status === 'aberto' && pode('conciliar') && c.item.startsWith('saldo conferido: ')
+              ? contas.find((x) => x.apelido === c.item.slice('saldo conferido: '.length)) : undefined
+            const href = !c.ok && !conta ? atalho(c.item) : null
             return (
               <div key={c.item} style={{ display: 'grid', gridTemplateColumns: '24px minmax(0,1fr) auto', gap: 10, alignItems: 'baseline', padding: '12px 16px', borderBottom: `1px solid ${theme.borderFaint}` }}>
                 <span aria-hidden style={{ color: c.ok ? theme.positive : c.bloqueia ? theme.negative : theme.warning, fontSize: 14 }}>{c.ok ? '✓' : c.bloqueia ? '▲' : '○'}</span>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: c.ok ? 400 : 600, color: c.ok ? theme.text2 : theme.text, textTransform: 'none' }}>{c.item.charAt(0).toUpperCase() + c.item.slice(1)}</div>
                   <div style={{ fontSize: 11.5, color: theme.text3, marginTop: 2 }}>
-                    {c.ok ? 'ok' : c.detalhe}{!c.ok && !c.bloqueia && ' · não impede o fechamento'}
+                    {c.ok ? 'ok' : detalheLegivel(c.detalhe)}{!c.ok && !c.bloqueia && ' · não impede o fechamento'}
                   </div>
                 </div>
                 {href && <Link href={href} style={{ fontSize: 12, color: theme.accent, whiteSpace: 'nowrap' }}>Resolver →</Link>}
+                {conta && <SaldoManual conta={conta} mes={mes} aoSalvar={(r) => r.ok ? (setAviso({ tipo: 'ok', texto: `Saldo de ${conta.apelido} informado` }), router.refresh()) : setAviso({ tipo: 'erro', texto: r.mensagem ?? 'Não deu' })} />}
               </div>
             )
           })}
@@ -236,4 +241,49 @@ export default function FechamentoClient({ org, mes, meses, detalhe, eu }: {
 
 function Sem({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 13, color: theme.text2, lineHeight: 1.5 }}>{children}</div>
+}
+
+// O banco formata a diferença com to_char (separador do locale do servidor, en-US em produção) → reescreve em R$.
+// dif = saldo da fonte − saldo do sistema.
+function detalheLegivel(d: string) {
+  const m = /^diferença (-?[\d.,]+)$/.exec(d)
+  if (!m) return d
+  const n = Number(m[1]!.replace(/,/g, ''))
+  return `saldo da conta R$ ${fmtBRL(Math.abs(n))} ${n > 0 ? 'acima' : 'abaixo'} do sistema — falta lançar ou conciliar algo`
+}
+
+// Último dia do mês (ou hoje, se o mês ainda corre) — é a data que o checklist confere (últimos 3 dias).
+function dataPadrao(mes: string) {
+  const fim = new Date(Date.UTC(+mes.slice(0, 4), +mes.slice(5, 7), 0)).toISOString().slice(0, 10)
+  const hoje = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
+  return fim < hoje ? fim : hoje
+}
+// "1.234,56" / "-12,5" / "1234.56" → número; vazio ou lixo → null
+function lerValor(t: string): number | null {
+  const s = t.trim().replace(/\s|R\$/g, '')
+  const n = Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s)
+  return s && Number.isFinite(n) ? Math.round(n * 100) / 100 : null
+}
+
+function SaldoManual({ conta, mes, aoSalvar }: { conta: { id_conta: string; apelido: string }; mes: string; aoSalvar: (r: { ok: boolean; mensagem?: string }) => void }) {
+  const [aberto, setAberto] = useState(false)
+  const [data, setData] = useState(() => dataPadrao(mes))
+  const [valor, setValor] = useState('')
+  const [ocupado, setOcupado] = useState(false)
+  const n = lerValor(valor)
+  if (!aberto) return <button onClick={() => setAberto(true)} style={{ fontSize: 12, color: theme.accent, background: 'none', border: 0, padding: 0, cursor: 'pointer', whiteSpace: 'nowrap' }}>Informar saldo</button>
+  return (
+    <form aria-label={`Informar saldo de ${conta.apelido}`} style={{ gridColumn: '2 / -1', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}
+      onSubmit={async (e) => {
+        e.preventDefault(); if (n === null) return
+        setOcupado(true); const r = await A.informarSaldo(conta.id_conta, data, n); setOcupado(false)
+        aoSalvar(r as { ok: boolean; mensagem?: string }); if (r.ok) setAberto(false)
+      }}>
+      <input type="date" value={data} onChange={(e) => setData(e.target.value)} aria-label="Data do saldo" style={{ ...estiloCampo, width: 150 }} />
+      <input value={valor} onChange={(e) => setValor(e.target.value)} inputMode="decimal" placeholder="Saldo, ex.: 1.234,56" aria-label="Saldo" autoFocus style={{ ...estiloCampo, width: 170, fontVariantNumeric: 'tabular-nums' }} />
+      <button type="submit" disabled={ocupado || n === null} style={botaoPrimario(ocupado || n === null)}>Salvar</button>
+      <button type="button" onClick={() => setAberto(false)} style={botaoSecundario()}>Cancelar</button>
+      <span style={{ flexBasis: '100%', fontSize: 11.5, color: theme.text3 }}>Saldo da conta no fim do dia, como aparece no app do banco ou da plataforma. Fica registrado quem informou.</span>
+    </form>
+  )
 }

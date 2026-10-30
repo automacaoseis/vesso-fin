@@ -350,6 +350,16 @@ describe.skipIf(!url)('API × banco', () => {
     })
   })
 
+  describe('0007: informar saldo à mão', () => {
+    const CONTA = '40000000-0000-0000-0000-0000000000b2'
+    it('analista informa; quem não concilia leva 403; dado ruim leva 422', async () => {
+      expect((await post(`/contas/${CONTA}/saldos`, 'analista', { data: '2026-10-29', saldo: -12.5 })).status).toBe(200)
+      expect((await post(`/contas/${CONTA}/saldos`, 'gestor', { data: '2026-10-29', saldo: 1 })).status).toBe(403)
+      expect((await post(`/contas/${CONTA}/saldos`, 'analista', { data: '2026-10-29', saldo: 1.005 })).status).toBe(422)
+      expect((await post(`/contas/${CONTA}/saldos`, 'analista', { data: '29/10/2026', saldo: 1 })).status).toBe(422)
+    })
+  })
+
   it('rota inexistente → 404 (depois do portão)', async () => expect((await get('/nada', 'analista')).status).toBe(404))
 })
 
