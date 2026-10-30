@@ -6,6 +6,7 @@
 --   · titular/sócio: caixa, relatórios e documentos;  · secretaria: só documentos (novo papel do portal, já no CHECK).
 --   · o cliente pode ANEXAR arquivo a um documento pedido (policy de INSERT no bucket só na pasta da própria org).
 -- Depende da 0009 (documentos + bucket bpo-fin).
+-- Aplicada em produção em 30/10/2026 (SQL Editor) como 20261030170000_bpo_fin_0010_portal_cliente.
 begin;
 
 -- org BPO do cliente logado + papel no portal (nulo = não é cliente do BPO)
