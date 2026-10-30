@@ -18,8 +18,8 @@ export interface OrgResumo { id_org: string; nome: string; tipo: 'cliente' | 'ca
 
 const FOLGA = 32
 
-export default function Shell({ orgs, email, tema, densidade, children }: {
-  orgs: OrgResumo[]; email: string | null; tema: Tema; densidade: Densidade; children: React.ReactNode
+export default function Shell({ orgs, ehDono, email, tema, densidade, children }: {
+  orgs: OrgResumo[]; ehDono: boolean; email: string | null; tema: Tema; densidade: Densidade; children: React.ReactNode
 }) {
   const path = usePathname()
   const m = /^\/org\/([^/]+)(?:\/([^/]+))?/.exec(path)
@@ -45,19 +45,20 @@ export default function Shell({ orgs, email, tema, densidade, children }: {
         { href: '/conexoes', rotulo: 'Conexões', ativo: path.startsWith('/conexoes') },
         { href: '/equipe', rotulo: 'Equipe', ativo: path.startsWith('/equipe') },
         { href: '/acessos', rotulo: 'Acessos', ativo: path.startsWith('/acessos') },
+        ...(ehDono ? [{ href: '/conferencia', rotulo: 'Conferência', ativo: path.startsWith('/conferencia') }] : []),
       ]
 
   return (
     <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 40, background: theme.bg }}>
-        <div className="v-header-grid" style={{ maxWidth: largura, margin: '0 auto', padding: `0 ${FOLGA}px`, minHeight: ALTURA_HEADER, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)', alignItems: 'center', gap: 20 }}>
+        <div className="v-header-grid" style={{ maxWidth: largura, margin: '0 auto', padding: `0 ${FOLGA}px`, minHeight: ALTURA_HEADER, display: 'grid', gridTemplateColumns: 'max-content minmax(0,1fr) max-content', alignItems: 'center', gap: 20 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }} aria-label="Vesso Financeiro — início">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/vesso-logo-ink.svg" alt="Vesso" className="f-logo" style={{ height: 24, width: 'auto', flexShrink: 0 }} />
             <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: theme.text3, paddingLeft: 12, borderLeft: `1px solid ${theme.border2}`, lineHeight: '16px' }}>Financeiro</span>
           </Link>
 
-          <nav aria-label="Seções" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 26 }}>
+          <nav aria-label="Seções" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: itens.length > 7 ? 20 : 26, flexWrap: 'wrap', rowGap: 6 }}>
             {itens.map((i) => (
               <Link key={i.rotulo} href={i.href} aria-current={i.ativo ? 'page' : undefined} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '27px 0 25px',

@@ -8,6 +8,6 @@ import { lerDensidade } from '@/lib/densidade-servidor'
 export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const quem = await quemEstaLogado()
   if (!quem) redirect('/login')
-  const [{ orgs }, tema, densidade] = await Promise.all([api.get<{ orgs: OrgResumo[] }>('/orgs'), lerTema(), lerDensidade()])
-  return <Shell orgs={orgs} email={quem.email} tema={tema} densidade={densidade}>{children}</Shell>
+  const [{ orgs, eh_dono }, tema, densidade] = await Promise.all([api.get<{ eh_dono: boolean; orgs: OrgResumo[] }>('/orgs'), lerTema(), lerDensidade()])
+  return <Shell orgs={orgs} ehDono={eh_dono} email={quem.email} tema={tema} densidade={densidade}>{children}</Shell>
 }
