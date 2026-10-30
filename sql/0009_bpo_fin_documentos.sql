@@ -8,6 +8,7 @@
 --   · recusar volta o documento para 'pedido' com o motivo (o item do checklist volta a bloquear); o caminho
 --     recusado fica no log de auditoria. Dispensar = apagar um PEDIDO sem arquivo (feito por engano), com log.
 --   · pedir/validar/recusar/dispensar exigem 'lancar'; anexar/registrar exigem 'importar'.
+-- Aplicada em produção em 30/10/2026 (SQL Editor) como 20261030150000_bpo_fin_0009_documentos.
 begin;
 
 alter table bpo_fin.documentos
