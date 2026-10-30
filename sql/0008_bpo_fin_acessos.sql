@@ -6,6 +6,7 @@
 --   · head (ação configurar_org na org) concede/revoga leitura/analista/revisor NAQUELA org — não mexe em head nem em global;
 --   · ninguém altera o próprio acesso; dono não recebe acesso (já vê tudo);
 --   · trocar o papel = revoga o ativo e cria outro (histórico fica); motivo obrigatório nos dois sentidos.
+-- Aplicada em produção em 30/10/2026 como 20261030125436_bpo_fin_0008_acessos.
 begin;
 
 alter table bpo_fin.org_acessos
