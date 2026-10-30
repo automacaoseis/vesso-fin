@@ -134,8 +134,10 @@ export function criarApp(deps: Deps) {
     const busca = f.q ? `%${f.q.replace(/[\\%_]/g, (x) => '\\' + x)}%` : null
     return c.json(await ler(c, (q) => q(
       `select a.id_titulo, a.tipo, a.descricao, a.competencia, a.data_vencimento, a.valor, a.valor_baixado, a.saldo,
-              a.dias_atraso, a.faixa, a.id_plano_conta, pc.nome as conta, ct.nome as contraparte
+              a.dias_atraso, a.faixa, a.id_plano_conta, pc.nome as conta, pc.generica, ct.nome as contraparte,
+              t.parcela, t.total_parcelas
          from bpo_fin.v_titulos_abertos a
+         join bpo_fin.titulos t on t.id_titulo = a.id_titulo
          left join bpo_fin.plano_contas pc on pc.id_plano_conta = a.id_plano_conta
          left join bpo_fin.contrapartes ct on ct.id_contraparte = a.id_contraparte
         where a.id_org = $1 and ($2::text is null or a.tipo = $2) and ($3::text is null or a.faixa = $3)

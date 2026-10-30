@@ -33,6 +33,7 @@ export default function Shell({ orgs, email, tema, densidade, children }: {
         { href: `/org/${orgAtual.id_org}`, rotulo: 'Resumo', ativo: !m?.[2] },
         { href: `/org/${orgAtual.id_org}/conciliacao`, rotulo: 'Conciliação', ativo: m?.[2] === 'conciliacao' },
         { href: `/org/${orgAtual.id_org}/lancamentos`, rotulo: 'Lançamentos', ativo: m?.[2] === 'lancamentos' },
+        { href: `/org/${orgAtual.id_org}/vencimentos`, rotulo: 'A pagar e receber', ativo: m?.[2] === 'vencimentos' },
         { href: `/org/${orgAtual.id_org}/relatorios`, rotulo: 'Relatórios', ativo: m?.[2] === 'relatorios' },
         { href: `/org/${orgAtual.id_org}/fechamento`, rotulo: 'Fechamento', ativo: m?.[2] === 'fechamento' },
         { href: '/conexoes', rotulo: 'Conexões', ativo: false },
