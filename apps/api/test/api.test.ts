@@ -383,6 +383,33 @@ describe.skipIf(!url)('API × banco', () => {
     })
   })
 
+  describe('0008: acessos e equipe', () => {
+    it('head concede e revoga na org cliente; analista leva 403; entrada ruim 422', async () => {
+      const r = await post('/acessos', 'head', { email: 'Gestor_Trafego@x', id_org: ORG.b, papel: 'leitura', motivo: 'acompanha o cliente' })
+      expect(r.status).toBe(200)
+      const lista = (await get('/acessos', 'head')).json
+      expect(lista.eh_dono).toBe(false)
+      expect(lista.orgs.map((o: any) => o.id_org)).toContain(ORG.b)
+      expect(lista.orgs.map((o: any) => o.id_org)).not.toContain(ORG.casa)
+      const meu = lista.acessos.find((a: any) => a.id_acesso === r.json.id)
+      expect(meu).toMatchObject({ email: 'gestor_trafego@x', papel: 'leitura', ativo: true, pode_administrar: true })
+      expect((await post('/acessos', 'analista', { email: 'gestor_trafego@x', id_org: ORG.b, papel: 'leitura', motivo: 'tentando' })).status).toBe(403)
+      expect((await post('/acessos', 'head', { email: 'gestor_trafego@x', id_org: null, papel: 'analista', motivo: 'todas as orgs' })).status).toBe(403)
+      expect((await post('/acessos', 'head', { email: 'nao-e-email', id_org: ORG.b, papel: 'leitura', motivo: 'formato' })).status).toBe(422)
+      expect((await post('/acessos', 'head', { email: 'ninguem@x.com', id_org: ORG.b, papel: 'leitura', motivo: 'quem é' })).status).toBe(422)
+      expect((await post(`/acessos/${r.json.id}/revogar`, 'head', { motivo: 'saiu do projeto' })).status).toBe(200)
+      expect((await get('/acessos', 'analista')).json.acessos.every((a: any) => a.email === 'analista@x')).toBe(true)
+    })
+    it('equipe: tempo do período com e-mail das pessoas', async () => {
+      const r = await get('/equipe?de=2026-01-01&ate=2026-12-01', 'analista')
+      expect(r.status).toBe(200)
+      expect(Array.isArray(r.json.tempo) && Array.isArray(r.json.agora)).toBe(true)
+      const ids = new Set([...r.json.tempo, ...r.json.agora].map((x: any) => x.user_auth_id))
+      expect(r.json.pessoas.every((p: any) => ids.has(p.user_auth_id) && p.email)).toBe(true)
+      expect((await get('/equipe?de=2026-01-15&ate=2026-12-01', 'analista')).status).toBe(422)
+    })
+  })
+
   it('rota inexistente → 404 (depois do portão)', async () => expect((await get('/nada', 'analista')).status).toBe(404))
 })
 

@@ -1,6 +1,6 @@
 // Contrato da API (docs/PROMPT.md §8): entrada de cada rota, validada na API e reaproveitada no web.
 import { z } from 'zod'
-import { ESTADOS_MOVIMENTO, ETAPAS_TEMPO, TIPOS_TITULO } from './enums'
+import { ESTADOS_MOVIMENTO, ETAPAS_TEMPO, PAPEIS, TIPOS_TITULO } from './enums'
 
 // z.guid e não z.uuid: o zod 4 recusa uuid fora das versões RFC, e o Postgres aceita qualquer um.
 export const zId = z.guid()
@@ -57,6 +57,14 @@ export const bTransferencia = z.object({ id_mov_saida: zId, id_mov_entrada: zId 
 export const bMotivo = z.object({ motivo: zMotivoCurto })
 export const bReabrir = z.object({ motivo: zMotivo })
 export const qCompetencia = z.object({ competencia: zCompetencia })
+// Acessos (0008): id_org nulo = todas as orgs cliente (só o dono concede).
+export const bConcederAcesso = z.object({
+  email: z.string().trim().toLowerCase().max(320).regex(/^[^\s@]+@[^\s@]+$/, 'e-mail inválido'),  // existência quem confere é o banco
+  id_org: zId.nullable(),
+  papel: z.enum(PAPEIS),
+  motivo: zMotivoCurto,
+  expira_em: z.iso.date().optional(),
+})
 // Saldo da conta informado à mão (0007): conta sem extrato/API. Pode ser negativo (cheque especial, cartão).
 export const bInformarSaldo = z.object({ data: zData, saldo: zCentavos.refine((v) => Math.abs(v) < 1e12, 'saldo fora do limite') })
 export const bCriarTitulo = z.object({

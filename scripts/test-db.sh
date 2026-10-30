@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Todos os testes do banco, cada um num banco NOVO com locale ICU (como produção):
-#   núcleo (test/10) · importação (0002 + conferência) · 0004 (test/30) · 0005 (test/40) · 0007 (test/50) — sempre com todas as migrations.
+#   núcleo (test/10) · importação (0002 + conferência) · 0004 (test/30) · 0005 (test/40) · 0007 (test/50) · 0008 (test/60) — sempre com todas as migrations.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 command -v psql >/dev/null || export PATH="$(brew --prefix postgresql@16)/bin:$PATH"
-MIGS=(sql/0001_bpo_fin_nucleo.sql sql/0003_bpo_fin_search_path_funcoes_hash.sql sql/0004_bpo_fin_upload_extrato_desfazer_transferencia.sql sql/0005_bpo_fin_sync_asaas.sql sql/0007_bpo_fin_informar_saldo.sql)
+MIGS=(sql/0001_bpo_fin_nucleo.sql sql/0003_bpo_fin_search_path_funcoes_hash.sql sql/0004_bpo_fin_upload_extrato_desfazer_transferencia.sql sql/0005_bpo_fin_sync_asaas.sql sql/0007_bpo_fin_informar_saldo.sql sql/0008_bpo_fin_acessos.sql)
 STUBS=(test/00_stubs_supabase.sql test/01_stub_vault.sql)
 novo() { dropdb --if-exists "$1" 2>/dev/null; createdb --template=template0 --locale-provider=icu --icu-locale=en-US --locale=en_US.UTF-8 "$1"; }
 aplicar() { local db=$1; shift; local args=(); for f in "$@"; do args+=(-f "$f"); done; psql -d "$db" -v ON_ERROR_STOP=1 -q "${args[@]}" >/dev/null 2>&1; }
@@ -36,4 +36,8 @@ novo vf_t7; aplicar vf_t7 "${STUBS[@]}" "${MIGS[@]}" apps/api/test/seed.sql
 saida=$(psql -d vf_t7 -v ON_ERROR_STOP=1 -q -f test/50_testes_0007.sql 2>&1 || true)
 n=$(grep -c "NOTICE:  ok" <<<"$saida" || true)
 if grep -q "TODOS OS TESTES DA 0007 PASSARAM" <<<"$saida"; then echo "0007: $n ok"; else echo "0007 FALHOU"; grep -E "ERROR|FALHA" <<<"$saida"; falhou=1; fi
+novo vf_t8; aplicar vf_t8 "${STUBS[@]}" "${MIGS[@]}" apps/api/test/seed.sql
+saida=$(psql -d vf_t8 -v ON_ERROR_STOP=1 -q -f test/60_testes_0008.sql 2>&1 || true)
+n=$(grep -c "NOTICE:  ok" <<<"$saida" || true)
+if grep -q "TODOS OS TESTES DA 0008 PASSARAM" <<<"$saida"; then echo "0008: $n ok"; else echo "0008 FALHOU"; grep -E "ERROR|FALHA" <<<"$saida"; falhou=1; fi
 exit $falhou

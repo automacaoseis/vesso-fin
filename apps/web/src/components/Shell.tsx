@@ -43,6 +43,8 @@ export default function Shell({ orgs, email, tema, densidade, children }: {
         { href: '/fechamentos', rotulo: 'Fechamentos', ativo: path.startsWith('/fechamentos') },
         { href: '/', rotulo: 'Organizações', ativo: path === '/' },
         { href: '/conexoes', rotulo: 'Conexões', ativo: path.startsWith('/conexoes') },
+        { href: '/equipe', rotulo: 'Equipe', ativo: path.startsWith('/equipe') },
+        { href: '/acessos', rotulo: 'Acessos', ativo: path.startsWith('/acessos') },
       ]
 
   return (

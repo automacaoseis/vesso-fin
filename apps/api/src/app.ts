@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono'
 import type pg from 'pg'
 import type { z } from 'zod'
 import {
-  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, qCompetencia, bRevisar, bTempoIniciar, bTempoParar,
+  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, qCompetencia, bConcederAcesso, bRevisar, bTempoIniciar, bTempoParar,
   bTransferencia, qFato, qMovimentos, qPeriodo, qTitulosAbertos, zCompetencia, zId, type ErroApi,
 } from '@vesso-fin/shared'
 import { CABECALHO_SERVICO, verificarServico } from '@vesso-fin/shared/servico'
@@ -462,6 +462,50 @@ export function criarApp(deps: Deps) {
       await escrever(c, (q) => q(`select bpo_fin.fn_reabrir_mes($1, $2, $3)`, [id, comp, b.motivo]))
     } else throw naoEncontrado('ação')
     return c.json({ ok: true })
+  })
+
+  // ─── acessos (0008) ──────────────────────────────────────────────────────────────
+  app.get('/acessos', async (c) => c.json(await ler(c, async (q) => {
+    const [d] = await q<{ eh_dono: boolean }>(`select bpo_fin.fn_eh_dono() as eh_dono`)
+    return {
+      eh_dono: d!.eh_dono,
+      acessos: await q(`select * from bpo_fin.fn_listar_acessos()`),
+      // onde quem chama pode conceder (o formulário só oferece estas)
+      orgs: await q(`select id_org, nome, tipo from bpo_fin.organizacoes where bpo_fin.fn_pode(id_org, 'configurar_org') order by tipo desc, nome`),
+    }
+  })))
+
+  app.post('/acessos', async (c) => {
+    const b = await corpo(c, bConcederAcesso)
+    // validade vale até o fim do dia escolhido, no fuso de São Paulo
+    const expira = b.expira_em ? `${b.expira_em}T23:59:59-03:00` : null
+    const [r] = await escrever(c, (q) => q(`select bpo_fin.fn_conceder_acesso($1, $2, $3, $4, $5) as id`, [b.email, b.id_org, b.papel, b.motivo, expira]))
+    return c.json({ ok: true, id: r!.id })
+  })
+
+  app.post('/acessos/:id/revogar', async (c) => {
+    const b = await corpo(c, bMotivo)
+    await escrever(c, (q) => q(`select bpo_fin.fn_revogar_acesso($1, $2)`, [param(c, 'id'), b.motivo]))
+    return c.json({ ok: true })
+  })
+
+  // ─── equipe: tempo por org × etapa × pessoa (v_tempo_org) + quem está com cronômetro aberto ─
+  app.get('/equipe', async (c) => {
+    const f = query(c, qPeriodo)
+    return c.json(await ler(c, async (q) => {
+      const tempo = await q<{ user_auth_id: string }>(
+        `select v.id_org, o.nome as organizacao, v.competencia, v.etapa, v.user_auth_id, v.minutos::int, v.sessoes::int
+           from bpo_fin.v_tempo_org v join bpo_fin.organizacoes o on o.id_org = v.id_org
+          where v.competencia between $1 and $2
+          order by o.nome, v.competencia, v.etapa`, [f.de, f.ate])
+      const agora = await q<{ user_auth_id: string }>(
+        `select t.id_org, o.nome as organizacao, t.etapa, t.user_auth_id, t.inicio
+           from bpo_fin.tempo_tarefa t join bpo_fin.organizacoes o on o.id_org = t.id_org
+          where t.fim is null and t.inicio > now() - interval '12 hours' order by t.inicio`)
+      const ids = [...new Set([...tempo, ...agora].map((x) => x.user_auth_id))]
+      const pessoas = ids.length ? await q(`select * from bpo_fin.fn_pessoas($1::uuid[])`, [ids]) : []
+      return { tempo, agora, pessoas }
+    }))
   })
 
   // ─── tempo ───────────────────────────────────────────────────────────────────────
