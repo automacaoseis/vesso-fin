@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono'
 import type pg from 'pg'
 import type { z } from 'zod'
 import {
-  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, qCompetencia, bConcederAcesso, bPedirDocumento, bValidarDocumento, qDocumentos, bRevisar, bTempoIniciar, bTempoParar,
+  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, qCompetencia, bConcederAcesso, bPedirDocumento, bValidarDocumento, qDocumentos, bCriarOrg, bAtualizarOrg, bLigarPortal, bCriarEntidade, bCriarConta, qBuscaCliente, bRevisar, bTempoIniciar, bTempoParar,
   bTransferencia, qFato, qMovimentos, qPeriodo, qTitulosAbertos, zCompetencia, zId, type ErroApi,
 } from '@vesso-fin/shared'
 import { CABECALHO_SERVICO, verificarServico } from '@vesso-fin/shared/servico'
@@ -566,6 +566,84 @@ export function criarApp(deps: Deps) {
       throw new ErroHttp(403, { erro: 'sem_permissao', mensagem: 'só o dono vê a conferência da Seis' })
     return q(`select * from bpo_fin.v_conferencia_dre_seis order by organizacao, competencia`)   // uma linha por org casa × mês (0006)
   })))
+
+  // ─── cadastro (0011) ──────────────────────────────────────────────────────────────
+  app.get('/cadastro/opcoes', async (c) => c.json(await ler(c, async (q) => {
+    const [p] = await q<{ pode: boolean; dono: boolean }>(`select bpo_fin.fn_pode_cadastrar() pode, bpo_fin.fn_eh_dono() dono`)
+    return {
+      pode_cadastrar: p!.pode, eh_dono: p!.dono,
+      turmas: await q(`select codigo, nome, dia_util_limite from bpo_fin.turmas_fechamento where ativa order by codigo`),
+      modelos: await q(`select m.id_modelo, m.nome, m.descricao, (select count(*)::int from bpo_fin.plano_contas p where p.id_modelo = m.id_modelo) itens
+                          from bpo_fin.plano_contas_modelos m order by m.nome`),
+      // de onde copiar o plano: orgs que eu vejo e que têm plano
+      orgs_com_plano: await q(`select o.id_org, o.nome, o.tipo, count(p.*)::int itens from bpo_fin.organizacoes o
+                                 join bpo_fin.plano_contas p on p.id_org = o.id_org group by 1, 2, 3 order by o.tipo desc, o.nome`),
+    }
+  })))
+
+  app.get('/cadastro/clientes', async (c) => {
+    const f = query(c, qBuscaCliente)
+    return c.json(await ler(c, (q) => q(`select * from bpo_fin.fn_buscar_clientes($1)`, [f.q])))
+  })
+
+  app.post('/orgs', async (c) => {
+    const b = await corpo(c, bCriarOrg)
+    const [r] = await escrever(c, (q) => q(`select bpo_fin.fn_criar_organizacao($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) as id`,
+      [b.nome, b.tipo, b.id_cliente, b.razao_social ?? null, b.nome_fantasia ?? null, b.cnpj, b.regime, b.competencia_inicial, b.turma,
+       b.copiar_plano_de ?? null, b.id_modelo ?? null]))
+    return c.json({ ok: true, id: r!.id }, 201)
+  })
+
+  app.get('/orgs/:id/cadastro', async (c) => {
+    const id = param(c, 'id')
+    return c.json(await ler(c, async (q) => {
+      const [org] = await q(`select id_org, nome, tipo, status, turma_fechamento, competencia_inicial, id_cliente, id_cliente_portal, created_at
+                               from bpo_fin.organizacoes where id_org = $1`, [id])
+      if (!org) throw new ErroHttp(404, { erro: 'nao_encontrado', mensagem: 'organização não encontrada' })
+      const [[cliente], entidades, contas, [plano], [pode]] = await Promise.all([
+        q(`select * from bpo_fin.fn_cliente_da_org($1)`, [id]),
+        q(`select id_entidade, razao_social, nome_fantasia, cnpj, regime_tributario, ativa from bpo_fin.entidades where id_org = $1 order by created_at`, [id]),
+        q(`select ct.id_conta, ct.id_entidade, ct.tipo, ct.instituicao, ct.apelido, ct.numero_final, ct.saldo_inicial, ct.data_saldo_inicial, ct.ativa,
+                  coalesce(json_agg(json_build_object('metodo', x.metodo, 'status', x.status)) filter (where x.id_conexao is not null), '[]') conexoes
+             from bpo_fin.contas ct left join bpo_fin.conexoes x on x.id_conta = ct.id_conta
+            where ct.id_org = $1 group by ct.id_conta order by ct.ativa desc, ct.apelido`, [id]),
+        q(`select count(*)::int itens, count(*) filter (where aceita_lancamento)::int analiticas from bpo_fin.plano_contas where id_org = $1`, [id]),
+        q(`select bpo_fin.fn_pode($1, 'configurar_org') configurar, bpo_fin.fn_eh_dono() dono`, [id]),
+      ])
+      return { org, cliente: cliente ?? null, entidades, contas, plano, pode }
+    }))
+  })
+
+  app.post('/orgs/:id/atualizar', async (c) => {
+    const b = await corpo(c, bAtualizarOrg)
+    await escrever(c, (q) => q(`select bpo_fin.fn_atualizar_organizacao($1, $2, $3, $4, $5)`, [param(c, 'id'), b.nome, b.status, b.turma, b.competencia_inicial]))
+    return c.json({ ok: true })
+  })
+
+  app.post('/orgs/:id/portal', async (c) => {
+    const b = await corpo(c, bLigarPortal)
+    await escrever(c, (q) => q(`select bpo_fin.fn_ligar_portal($1, $2)`, [param(c, 'id'), b.id_cliente]))
+    return c.json({ ok: true })
+  })
+
+  app.post('/orgs/:id/entidades', async (c) => {
+    const b = await corpo(c, bCriarEntidade)
+    const [r] = await escrever(c, (q) => q(`select bpo_fin.fn_criar_entidade($1, $2, $3, $4, $5) as id`, [param(c, 'id'), b.razao_social, b.nome_fantasia ?? null, b.cnpj, b.regime]))
+    return c.json({ ok: true, id: r!.id }, 201)
+  })
+
+  app.post('/orgs/:id/contas', async (c) => {
+    const b = await corpo(c, bCriarConta)
+    const [r] = await escrever(c, (q) => q(`select bpo_fin.fn_criar_conta($1, $2, $3, $4, $5, $6, $7, $8, $9) as id`,
+      [param(c, 'id'), b.id_entidade, b.tipo, b.instituicao, b.apelido, b.numero_final ?? null, b.saldo_inicial, b.data_saldo_inicial, b.metodo]))
+    return c.json({ ok: true, id: r!.id }, 201)
+  })
+
+  app.post('/contas/:id/desativar', async (c) => {
+    const b = await corpo(c, bMotivo)
+    await escrever(c, (q) => q(`select bpo_fin.fn_desativar_conta($1, $2)`, [param(c, 'id'), b.motivo]))
+    return c.json({ ok: true })
+  })
 
   // ─── documentos (0009) ───────────────────────────────────────────────────────────
   const COLS_DOC = `d.id_documento, d.id_org, d.id_titulo, t.descricao as titulo, d.tipo, d.competencia, d.descricao, d.status,

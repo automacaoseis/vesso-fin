@@ -464,6 +464,44 @@ describe.skipIf(!url)('API × banco', () => {
     })
   })
 
+  describe('0011: cadastro', () => {
+    it('opções, criar org da casa copiando plano, editar, entidade, conta, desativar, portal', async () => {
+      const op = await get('/cadastro/opcoes', 'dono')
+      expect(op.json).toMatchObject({ pode_cadastrar: true, eh_dono: true })
+      expect(op.json.turmas.map((t: any) => t.codigo)).toEqual(['A', 'B', 'C'])
+      expect(op.json.orgs_com_plano.some((o: any) => o.id_org === ORG.b && o.itens > 0)).toBe(true)
+      expect((await get('/cadastro/opcoes', 'analista')).json.pode_cadastrar).toBe(false)
+
+      const nova = await post('/orgs', 'dono', { nome: 'Empresa da Lara', tipo: 'casa', id_cliente: null, cnpj: '11.111.111/0001-11', regime: 'simples',
+        competencia_inicial: '2026-11-01', turma: 'B', copiar_plano_de: ORG.b })
+      expect(nova.status).toBe(201)
+      const cad = (await get(`/orgs/${nova.json.id}/cadastro`, 'dono')).json
+      expect(cad.org).toMatchObject({ nome: 'Empresa da Lara', tipo: 'casa', status: 'onboarding', turma_fechamento: 'B' })
+      expect(cad.entidades[0].cnpj).toBe('11111111000111')
+      expect(cad.plano.itens).toBeGreaterThan(0)
+      expect(cad.pode).toMatchObject({ configurar: true, dono: true })
+
+      expect((await post('/orgs', 'head', { nome: 'Casa', tipo: 'casa', id_cliente: null, cnpj: '11111111000111', regime: null, competencia_inicial: '2026-11-01', turma: null })).status).toBe(403)
+      expect((await post('/orgs', 'dono', { nome: 'Dup', tipo: 'cliente', id_cliente: '10000000-0000-0000-0000-000000000001', cnpj: '11111111000111', regime: null, competencia_inicial: '2026-11-01', turma: null })).status).toBe(422)
+      expect((await post('/orgs', 'dono', { nome: 'X', tipo: 'casa', id_cliente: null, cnpj: '123', regime: null, competencia_inicial: '2026-11-01', turma: null })).status).toBe(422)
+
+      expect((await post(`/orgs/${nova.json.id}/atualizar`, 'dono', { nome: 'Lara Estética', status: 'ativa', turma: 'A', competencia_inicial: '2026-11-01' })).status).toBe(200)
+      const ent = await post(`/orgs/${nova.json.id}/entidades`, 'dono', { razao_social: 'Lara Estética LTDA', cnpj: '22222222000122', regime: 'presumido' })
+      expect(ent.status).toBe(201)
+      const conta = await post(`/orgs/${nova.json.id}/contas`, 'dono', { id_entidade: ent.json.id, tipo: 'banco', instituicao: 'Nubank', apelido: 'Nubank PJ',
+        numero_final: '9876', saldo_inicial: 250.5, data_saldo_inicial: '2026-10-31', metodo: 'ofx' })
+      expect(conta.status).toBe(201)
+      const cad2 = (await get(`/orgs/${nova.json.id}/cadastro`, 'dono')).json
+      expect(cad2.org).toMatchObject({ nome: 'Lara Estética', status: 'ativa' })
+      expect(cad2.contas[0]).toMatchObject({ apelido: 'Nubank PJ', ativa: true, conexoes: [{ metodo: 'ofx', status: 'ativa' }] })
+      expect((await post(`/contas/${conta.json.id}/desativar`, 'dono', { motivo: 'conta encerrada' })).status).toBe(200)
+      expect((await post(`/orgs/${ORG.b}/portal`, 'dono', { id_cliente: null })).status).toBe(422)       // org cliente: não se liga
+      expect((await post(`/orgs/${ORG.b}/contas`, 'analista', { id_entidade: ent.json.id, tipo: 'banco', instituicao: 'Nubank', apelido: 'X1', saldo_inicial: 0, data_saldo_inicial: '2026-10-31', metodo: null })).status).toBe(403)
+      expect((await get(`/cadastro/clientes?q=Dr`, 'dono')).json.some((c: any) => c.nome === 'Dra. X' && c.organizacao === 'Clínica X')).toBe(true)
+      expect((await get(`/cadastro/clientes?q=D`, 'dono')).status).toBe(422)
+    })
+  })
+
   it('rota inexistente → 404 (depois do portão)', async () => expect((await get('/nada', 'analista')).status).toBe(404))
 })
 

@@ -1,6 +1,6 @@
 // Contrato da API (docs/PROMPT.md §8): entrada de cada rota, validada na API e reaproveitada no web.
 import { z } from 'zod'
-import { ESTADOS_MOVIMENTO, ETAPAS_TEMPO, PAPEIS, TIPOS_TITULO } from './enums'
+import { ESTADOS_MOVIMENTO, ETAPAS_TEMPO, PAPEIS, STATUS_ORG, TIPOS_TITULO } from './enums'
 
 // z.guid e não z.uuid: o zod 4 recusa uuid fora das versões RFC, e o Postgres aceita qualquer um.
 export const zId = z.guid()
@@ -57,6 +57,37 @@ export const bTransferencia = z.object({ id_mov_saida: zId, id_mov_entrada: zId 
 export const bMotivo = z.object({ motivo: zMotivoCurto })
 export const bReabrir = z.object({ motivo: zMotivo })
 export const qCompetencia = z.object({ competencia: zCompetencia })
+// Cadastro (0011)
+const zCnpj = z.string().transform((v) => v.replace(/\D/g, '')).pipe(z.string().length(14, 'CNPJ com 14 dígitos'))
+export const REGIMES = ['mei', 'simples', 'presumido', 'real'] as const
+export const TIPOS_CONTA = ['banco', 'gateway', 'adquirente', 'aplicacao', 'caixa'] as const
+export const bCriarOrg = z.object({
+  nome: z.string().trim().min(2).max(120),
+  tipo: z.enum(['cliente', 'casa']),
+  id_cliente: zId.nullable(),
+  razao_social: z.string().trim().max(200).optional(),
+  nome_fantasia: z.string().trim().max(200).optional(),
+  cnpj: zCnpj,
+  regime: z.enum(REGIMES).nullable(),
+  competencia_inicial: zData,
+  turma: z.enum(['A', 'B', 'C']).nullable(),
+  copiar_plano_de: zId.nullable().optional(),
+  id_modelo: zId.nullable().optional(),
+})
+export const bAtualizarOrg = z.object({
+  nome: z.string().trim().min(2).max(120), status: z.enum(STATUS_ORG), turma: z.enum(['A', 'B', 'C']).nullable(), competencia_inicial: zData,
+})
+export const bLigarPortal = z.object({ id_cliente: zId.nullable() })
+export const bCriarEntidade = z.object({
+  razao_social: z.string().trim().min(2).max(200), nome_fantasia: z.string().trim().max(200).optional(), cnpj: zCnpj, regime: z.enum(REGIMES).nullable(),
+})
+export const bCriarConta = z.object({
+  id_entidade: zId, tipo: z.enum(TIPOS_CONTA), instituicao: z.string().trim().min(2).max(80), apelido: z.string().trim().min(2).max(60),
+  numero_final: z.string().trim().regex(/^[0-9Xx-]{1,6}$/, 'só o final do número (até 6 dígitos)').optional(),
+  saldo_inicial: zCentavos, data_saldo_inicial: zData, metodo: z.enum(['ofx', 'manual']).nullable(),
+})
+export const qBuscaCliente = z.object({ q: z.string().trim().min(2).max(60) })
+
 // Documentos (0009)
 export const TIPOS_DOCUMENTO = ['nf', 'boleto', 'comprovante', 'contrato', 'extrato', 'guia_imposto', 'outro'] as const
 export const STATUS_DOCUMENTO = ['pedido', 'recebido', 'validado'] as const

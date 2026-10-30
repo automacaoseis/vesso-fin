@@ -38,6 +38,7 @@ export default function Shell({ orgs, ehDono, email, tema, densidade, children }
         { href: `/org/${orgAtual.id_org}/documentos`, rotulo: 'Documentos', ativo: m?.[2] === 'documentos' },
         { href: `/org/${orgAtual.id_org}/fechamento`, rotulo: 'Fechamento', ativo: m?.[2] === 'fechamento' },
         { href: '/conexoes', rotulo: 'Conexões', ativo: false },
+        { href: `/org/${orgAtual.id_org}/cadastro`, rotulo: 'Cadastro', ativo: m?.[2] === 'cadastro' },
       ]
     : [
         { href: '/fila', rotulo: 'Fila', ativo: path.startsWith('/fila') },
