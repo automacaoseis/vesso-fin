@@ -109,4 +109,27 @@ select checar((select count(*) = 0 from bpo_fin.fn_checklist_fechamento('2000000
 reset role;
 select checar((select count(*) >= 3 from bpo_fin.log_eventos where tabela = 'organizacoes'), 'organizações auditadas');
 
+-- 4. CORREÇÕES DA REVISÃO ────────────────────────────────────────────────────────────────
+-- competência inicial para FRENTE passando por mês fechado também é recusada
+insert into bpo_fin.fechamento_mensal (id_org, competencia, status) values ((select (v #>> '{}')::uuid from public.r where k = 'w'), '2027-01-01', 'fechado');
+select como('00000000-0000-0000-0000-0000000000b1');
+select esperar_erro(format($$select bpo_fin.fn_atualizar_organizacao(%L, 'Clínica W Saúde', 'ativa', 'C', '2027-03-01')$$, (select v #>> '{}' from public.r where k = 'w')), 'mês fechado entre');
+select bpo_fin.fn_atualizar_organizacao((select (v #>> '{}')::uuid from public.r where k = 'w'), 'Clínica W Saúde', 'ativa', 'C', '2027-01-01');
+select checar(true, 'competência até o mês fechado (sem passar dele) pode');
+-- cliente: anexar exige o arquivo existir no bucket e estar em <org>/cliente/
+reset role;
+update app_seis.cliente_acessos set id_cliente = '10000000-0000-0000-0000-000000000003' where user_auth_id = '00000000-0000-0000-0000-0000000000e5';
+insert into bpo_fin.documentos (id_documento, id_org, tipo, descricao, status, pedido_em)
+values ('d0000000-0000-0000-0000-0000000000aa', (select (v #>> '{}')::uuid from public.r where k = 'z'), 'nf', 'NF teste revisão', 'pedido', now());
+insert into public.r select 'pz', to_jsonb((select (v #>> '{}') from public.r where k = 'z') || '/cliente/nf.pdf');
+select como('00000000-0000-0000-0000-0000000000e5');
+select esperar_erro(format($$select public.fn_cliente_fin_anexar('d0000000-0000-0000-0000-0000000000aa', %L, 'nf.pdf', 10, 'application/pdf')$$, (select v #>> '{}' from public.r where k = 'pz')), 'arquivo não encontrado');
+select esperar_erro(format($$select public.fn_cliente_fin_anexar('d0000000-0000-0000-0000-0000000000aa', %L, 'nf.pdf', 10, 'application/pdf')$$,
+  (select v #>> '{}' from public.r where k = 'z') || '/2026-10/nf.pdf'), 'fora da pasta');
+insert into storage.objects (bucket_id, name) values ('bpo-fin', (select v #>> '{}' from public.r where k = 'pz'));
+select public.fn_cliente_fin_anexar('d0000000-0000-0000-0000-0000000000aa', (select v #>> '{}' from public.r where k = 'pz'), 'nf.pdf', 10, 'application/pdf');
+select esperar_erro(format($$select public.fn_cliente_fin_anexar('d0000000-0000-0000-0000-0000000000aa', %L, 'nf.pdf', 10, 'application/pdf')$$, (select v #>> '{}' from public.r where k = 'pz')), 'já foi enviado');
+reset role;
+select checar((select status = 'recebido' from bpo_fin.documentos where id_documento = 'd0000000-0000-0000-0000-0000000000aa'), 'cliente anexa quando o arquivo existe na pasta /cliente/');
+
 select checar(true, 'TODOS OS TESTES DA 0011 PASSARAM');

@@ -457,6 +457,15 @@ describe.skipIf(!url)('API × banco', () => {
       expect(av.status).toBe(201)
       expect([...arquivos.keys()].at(-1)).toMatch(new RegExp(`^${ORG.b}/2026-10/`))
       expect((await subir('analista', { tipo: 'boleto' })).status).toBe(422)          // avulso sem descrição
+      // nome com acento vira ASCII na chave do Storage; o original fica em arquivo_nome
+      const ac = await subir('analista', { tipo: 'nf', descricao: 'NF de março' }, 'Nota fiscal março ção.pdf')
+      expect(ac.status).toBe(201)
+      expect([...arquivos.keys()].at(-1)).toMatch(/-Nota fiscal marco cao\.pdf$/)
+      // pedido já recebido / de outra org: recusa ANTES de subir (nada novo no storage)
+      const antes = arquivos.size
+      expect((await subir('analista', { id_documento: p.json.id })).status).toBe(422)
+      expect((await subir('analista', { id_documento: '00000000-0000-0000-0000-00000000dead' })).status).toBe(404)
+      expect(arquivos.size).toBe(antes)
 
       const d = await post(`/orgs/${ORG.b}/documentos/pedir`, 'analista', { tipo: 'contrato', descricao: 'pedido errado' })
       expect((await post(`/documentos/${d.json.id}/dispensar`, 'analista', { motivo: 'pedido por engano' })).status).toBe(200)

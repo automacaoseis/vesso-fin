@@ -61,6 +61,10 @@ select bpo_fin.fn_editar_plano_conta((select (v #>> '{}')::uuid from public.r wh
   'RECEITA_BRUTA', null, 'mes_anterior', false, false, true);
 select checar((select nome = 'Telemedicina (online)' and regra_competencia = 'mes_anterior' from bpo_fin.plano_contas where id_plano_conta = (select (v #>> '{}')::uuid from public.r where k = 'c')), 'editar nome e regra');
 select esperar_erro(format($$select bpo_fin.fn_editar_plano_conta(%L, 'Grupo extra', null, null, null, null, false, false, false)$$, (select v #>> '{}' from public.r where k = 'g')), 'conta ativa dentro');
+-- ciclo: G_FILHO dentro de G_EXTRA; pôr G_EXTRA dentro de G_FILHO é recusado
+insert into public.r select 'g2', to_jsonb(bpo_fin.fn_criar_plano_conta('20000000-0000-0000-0000-00000000000b', 'G_FILHO', 'Grupo filho', (select (v #>> '{}')::uuid from public.r where k = 'g'), 'grupo', null, null, null, false, false));
+select esperar_erro(format($$select bpo_fin.fn_editar_plano_conta(%L, 'Grupo extra', %L, null, null, null, false, false, true)$$,
+  (select v #>> '{}' from public.r where k = 'g'), (select v #>> '{}' from public.r where k = 'g2')), 'está dentro desta conta');
 
 -- linha do DRE de conta com título em mês fechado: recusa
 reset role;

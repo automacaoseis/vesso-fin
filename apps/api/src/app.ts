@@ -710,7 +710,18 @@ export function criarApp(deps: Deps) {
     if (idDoc && !zId.safeParse(idDoc).success) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'id_documento inválido' })
     const avulso = idDoc ? null : bPedirDocumento.safeParse({ tipo: texto('tipo'), descricao: texto('descricao'), competencia: texto('competencia'), id_titulo: texto('id_titulo') })
     if (avulso && !avulso.success) throw invalido(avulso.error)
-    const nome = arquivo.name.normalize('NFC').replace(/[^\p{L}\p{N}._ -]+/gu, '_').slice(-120) || 'arquivo'
+    // ⚠️ Confere ANTES de subir: o bucket não tem DELETE (nem a API service_role) — arquivo de um pedido que o banco
+    // recusaria ficaria órfão para sempre. Pedido: tem que ser desta org e estar 'pedido'. Avulso: título (se houver) desta org.
+    if (idDoc) {
+      const [d] = await ler(c, (q) => q<{ id_org: string; status: string }>(`select id_org, status from bpo_fin.documentos where id_documento = $1`, [idDoc]))
+      if (!d || d.id_org !== idOrg) throw new ErroHttp(404, { erro: 'nao_encontrado', mensagem: 'documento não encontrado nesta organização' })
+      if (d.status !== 'pedido') throw new ErroHttp(422, { erro: 'regra', mensagem: 'este documento já foi recebido' })
+    } else if (avulso!.data!.id_titulo) {
+      const [t2] = await ler(c, (q) => q(`select 1 from bpo_fin.titulos where id_titulo = $1 and id_org = $2`, [avulso!.data!.id_titulo, idOrg]))
+      if (!t2) throw new ErroHttp(404, { erro: 'nao_encontrado', mensagem: 'título não encontrado nesta organização' })
+    }
+    // Chave do Storage só aceita ASCII seguro: tira acento e troca o resto por _. O nome original vai em arquivo_nome.
+    const nome = arquivo.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._ -]+/g, '_').slice(-120) || 'arquivo'
     const pasta = (avulso?.data?.competencia ?? new Date().toISOString()).slice(0, 7)
     const caminho = `${idOrg}/${pasta}/${crypto.randomUUID()}-${nome}`
     await deps.storage.enviar(c.get('token'), caminho, new Uint8Array(await arquivo.arrayBuffer()), arquivo.type)

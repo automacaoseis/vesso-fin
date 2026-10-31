@@ -2,6 +2,8 @@
 -- Por quê: docs/PROMPT.md §7 — "cadastro mínimo" entra na Fase 1b, quando cadastrar por SQL começa a doer.
 -- E o Luiz decidiu (30/10) que a Agência Seis (org CASA, com o histórico importado) é a primeira a aparecer no
 -- portal, pelo cliente "Seis e Marketing (comercial interno)".
+-- Inclui (fim do arquivo) correções da revisão de 31/10 em funções já em produção: fn_informar_saldo (0007),
+-- fn_anexar_documento (0009) e public.fn_cliente_fin_anexar (0010).
 -- Desenho:
 --   · id_cliente segue sendo "é cliente do BPO" (a CHECK da 0001 continua: casa nunca tem id_cliente, então não
 --     conta como cliente em lugar nenhum). A ligação com o portal é uma coluna NOVA, id_cliente_portal, só para
@@ -27,7 +29,9 @@ language sql stable security definer set search_path = '' as $$
   join bpo_fin.organizacoes o on (o.id_cliente = ca.id_cliente or o.id_cliente_portal = ca.id_cliente)
                              and o.status in ('onboarding', 'ativa')
   where ca.user_auth_id = auth.uid() and ca.ativo
-  order by ca.tipo = 'titular' desc
+  -- desempate estável: sem ele, quem casa com 2 orgs (ex.: equipe ligada ao cliente "Seis comercial interno" e a outro)
+  -- podia ter a pasta numa org e a policy do storage em outra, chamada a chamada
+  order by ca.tipo = 'titular' desc, o.id_org
   limit 1
 $$;
 
@@ -90,9 +94,12 @@ language plpgsql security definer set search_path = '' as $$
 begin
   perform bpo_fin.fn_exigir(p_id_org, 'configurar_org');
   if p_nome is null or length(btrim(p_nome)) < 2 then raise exception 'nome obrigatório'; end if;
-  if exists (select 1 from bpo_fin.fechamento_mensal f where f.id_org = p_id_org and f.status in ('fechado', 'liberado')
-               and f.competencia >= date_trunc('month', p_competencia_inicial)::date
-               and f.competencia < (select o.competencia_inicial from bpo_fin.organizacoes o where o.id_org = p_id_org)) then
+  if p_competencia_inicial is null then raise exception 'competência inicial obrigatória'; end if;
+  -- mês fechado entre a competência atual e a nova (nos DOIS sentidos) muda o que é "histórico" × "rotina" de um mês já entregue
+  if exists (select 1 from bpo_fin.fechamento_mensal f, bpo_fin.organizacoes o
+              where o.id_org = p_id_org and f.id_org = p_id_org and f.status in ('fechado', 'liberado')
+                and f.competencia >= least(date_trunc('month', p_competencia_inicial)::date, coalesce(o.competencia_inicial, date_trunc('month', p_competencia_inicial)::date))
+                and f.competencia <  greatest(date_trunc('month', p_competencia_inicial)::date, coalesce(o.competencia_inicial, date_trunc('month', p_competencia_inicial)::date))) then
     raise exception 'há mês fechado entre a competência nova e a atual: reabra antes';
   end if;
   update bpo_fin.organizacoes set nome = btrim(p_nome), status = p_status, turma_fechamento = p_turma,
@@ -182,6 +189,60 @@ begin
   if p_motivo is null or length(btrim(p_motivo)) < 5 then raise exception 'motivo obrigatório (5+ caracteres)'; end if;
   update bpo_fin.contas set ativa = false where id_conta = p_id_conta;
   update bpo_fin.conexoes set status = 'pausada', erro_msg = 'conta desativada: ' || btrim(p_motivo) where id_conta = p_id_conta;
+end $$;
+
+-- ─── correções da revisão de 31/10 em funções JÁ em produção (0007, 0009, 0010) ─────────────
+-- 0007: se o worker gravar a mesma data entre a checagem e o upsert, o saldo manual não sobrescreve o da fonte
+create or replace function bpo_fin.fn_informar_saldo(p_id_conta uuid, p_data date, p_saldo numeric) returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_c bpo_fin.contas%rowtype; v_ext uuid;
+begin
+  select * into v_c from bpo_fin.contas where id_conta = p_id_conta;
+  if not found then raise exception 'conta não encontrada'; end if;
+  perform bpo_fin.fn_exigir(v_c.id_org, 'conciliar');
+  if not v_c.ativa then raise exception 'conta inativa'; end if;
+  if p_data is null or p_saldo is null then raise exception 'data e saldo são obrigatórios'; end if;
+  if p_data > (now() at time zone 'America/Sao_Paulo')::date then raise exception 'data no futuro'; end if;
+  if v_c.data_saldo_inicial is not null and p_data < v_c.data_saldo_inicial then
+    raise exception 'data anterior ao saldo inicial da conta (%)', to_char(v_c.data_saldo_inicial, 'DD/MM/YYYY');
+  end if;
+  if bpo_fin.fn_mes_travado(v_c.id_org, p_data) then raise exception 'mês fechado: reabra antes'; end if;
+  select s.id_extrato into v_ext from bpo_fin.saldos_extrato s where s.id_conta = p_id_conta and s.data = p_data;
+  if v_ext is not null then raise exception 'o saldo desta data veio do extrato: não dá para sobrescrever à mão'; end if;
+  insert into bpo_fin.saldos_extrato (id_conta, data, saldo, informado_por, informado_em)
+  values (p_id_conta, p_data, round(p_saldo, 2), auth.uid(), now())
+  on conflict (id_conta, data) do update set saldo = excluded.saldo, informado_por = excluded.informado_por, informado_em = excluded.informado_em
+   where bpo_fin.saldos_extrato.id_extrato is null;
+  if not found then raise exception 'o saldo desta data veio do extrato: não dá para sobrescrever à mão'; end if;
+end $$;
+
+-- 0009: anexo atômico — dois anexos ao mesmo pedido ao mesmo tempo não "dão certo" os dois (um arquivo sumiria)
+create or replace function bpo_fin.fn_anexar_documento(p_id_documento uuid, p_storage_path text, p_nome text, p_bytes int, p_mime text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_org uuid;
+begin
+  select id_org into v_org from bpo_fin.documentos where id_documento = p_id_documento;
+  if v_org is null then raise exception 'documento não encontrado'; end if;
+  perform bpo_fin.fn_exigir(v_org, 'importar');
+  if bpo_fin.fn_org_do_caminho(p_storage_path) is distinct from v_org then raise exception 'arquivo fora da pasta da organização'; end if;
+  update bpo_fin.documentos set status = 'recebido', storage_path = p_storage_path, arquivo_nome = left(p_nome, 200),
+         arquivo_bytes = p_bytes, arquivo_mime = left(p_mime, 100), recebido_em = now(), recebido_por = auth.uid(), motivo_recusa = null
+   where id_documento = p_id_documento and status = 'pedido';
+  if not found then raise exception 'este documento já foi recebido'; end if;
+end $$;
+
+-- 0010: o cliente só "envia" se o arquivo EXISTE no bucket, na pasta <org>/cliente/ — antes dava para marcar recebido sem arquivo
+create or replace function public.fn_cliente_fin_anexar(p_id_documento uuid, p_storage_path text, p_nome text, p_bytes int, p_mime text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_org uuid := bpo_fin.fn_cliente_exigir(false);
+begin
+  if not exists (select 1 from bpo_fin.documentos where id_documento = p_id_documento and id_org = v_org) then raise exception 'documento não encontrado'; end if;
+  if p_storage_path is null or left(p_storage_path, length(v_org::text) + 9) <> v_org::text || '/cliente/' then raise exception 'arquivo fora da pasta da organização'; end if;
+  if not exists (select 1 from storage.objects o where o.bucket_id = 'bpo-fin' and o.name = p_storage_path) then raise exception 'arquivo não encontrado: envie de novo'; end if;
+  update bpo_fin.documentos set status = 'recebido', storage_path = p_storage_path, arquivo_nome = left(p_nome, 200),
+         arquivo_bytes = p_bytes, arquivo_mime = left(p_mime, 100), recebido_em = now(), recebido_por = auth.uid(), motivo_recusa = null
+   where id_documento = p_id_documento and id_org = v_org and status = 'pedido';
+  if not found then raise exception 'este documento já foi enviado'; end if;
 end $$;
 
 revoke execute on function bpo_fin.fn_pode_cadastrar(),

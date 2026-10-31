@@ -148,6 +148,13 @@ begin
   if p_id_pai is not null and (p_id_pai = p_id or not exists (select 1 from bpo_fin.plano_contas where id_plano_conta = p_id_pai and id_org = v.id_org and natureza = 'grupo')) then
     raise exception 'o pai precisa ser outro grupo desta organização';
   end if;
+  -- sem ciclo: o novo pai não pode estar DENTRO desta conta (G1 ⊃ G2 e G1 com pai G2 sumiria os dois da árvore)
+  if p_id_pai is not null and exists (
+       with recursive desc_(id) as (select id_plano_conta from bpo_fin.plano_contas where id_pai = p_id
+                                    union select p.id_plano_conta from bpo_fin.plano_contas p join desc_ d on p.id_pai = d.id)
+       select 1 from desc_ where id = p_id_pai) then
+    raise exception 'esse grupo está dentro desta conta: escolha outro pai';
+  end if;
   if p_linha_dre is distinct from v.linha_dre and exists (
        select 1 from bpo_fin.titulos t join bpo_fin.fechamento_mensal f on f.id_org = t.id_org and f.competencia = t.competencia
        where t.id_plano_conta = p_id and t.cancelado_em is null and f.status in ('fechado', 'liberado')) then
