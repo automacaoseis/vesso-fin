@@ -88,6 +88,24 @@ export const bCriarConta = z.object({
 })
 export const qBuscaCliente = z.object({ q: z.string().trim().min(2).max(60) })
 
+// Plano de contas (0012)
+export const NATUREZAS = ['grupo', 'receita', 'deducao', 'custo', 'despesa', 'investimento', 'financeira_receita', 'financeira_despesa',
+  'imposto', 'retirada', 'transferencia', 'aplicacao'] as const
+export const LINHAS_DRE = ['RECEITA_BRUTA', 'DEDUCOES', 'CUSTOS_VARIAVEIS', 'FOLHA', 'DESPESAS_FIXAS_OUTRAS', 'DESPESAS_FIXAS',
+  'INVEST_CRESCIMENTO', 'RECEITAS_FINANCEIRAS', 'DESPESAS_FINANCEIRAS', 'IMPOSTO_LUCRO'] as const
+export const REGRAS_COMPETENCIA = ['mes_corrente', 'mes_anterior', 'manual'] as const
+const planoComum = {
+  nome: z.string().trim().min(2).max(120),
+  id_pai: zId.nullable(),
+  linha_dre: z.enum(LINHAS_DRE).nullable(),
+  grupo_dfc: z.enum(['operacional', 'investimento', 'financiamento']).nullable(),
+  regra: z.enum(REGRAS_COMPETENCIA).nullable(),
+  generica: z.boolean(),
+  sensivel: z.boolean(),
+}
+export const bCriarPlanoConta = z.object({ ...planoComum, codigo: z.string().trim().regex(/^[A-Z0-9_.-]{2,60}$/, 'código: letras maiúsculas, números, _ . -'), natureza: z.enum(NATUREZAS) })
+export const bEditarPlanoConta = z.object({ ...planoComum, ativa: z.boolean() })
+
 // Documentos (0009)
 export const TIPOS_DOCUMENTO = ['nf', 'boleto', 'comprovante', 'contrato', 'extrato', 'guia_imposto', 'outro'] as const
 export const STATUS_DOCUMENTO = ['pedido', 'recebido', 'validado'] as const

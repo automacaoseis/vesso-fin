@@ -502,6 +502,23 @@ describe.skipIf(!url)('API × banco', () => {
     })
   })
 
+  describe('0012: plano pela tela e prazo com feriado', () => {
+    it('criar/editar conta do plano; fechamentos trazem prazo com feriado', async () => {
+      const g = await post(`/orgs/${ORG.b}/plano`, 'head', { codigo: 'G_API', nome: 'Grupo API', id_pai: null, natureza: 'grupo', linha_dre: null, grupo_dfc: null, regra: null, generica: false, sensivel: false })
+      expect(g.status).toBe(201)
+      const c = await post(`/orgs/${ORG.b}/plano`, 'head', { codigo: 'CAT_API', nome: 'Conta API', id_pai: g.json.id, natureza: 'receita', linha_dre: 'RECEITA_BRUTA', grupo_dfc: null, regra: 'mes_anterior', generica: false, sensivel: false })
+      expect(c.status).toBe(201)
+      expect((await post(`/orgs/${ORG.b}/plano`, 'head', { codigo: 'cat errado', nome: 'X', id_pai: null, natureza: 'receita', linha_dre: null, grupo_dfc: null, regra: null, generica: false, sensivel: false })).status).toBe(422)
+      expect((await post(`/orgs/${ORG.b}/plano`, 'analista', { codigo: 'CAT_A', nome: 'XX', id_pai: null, natureza: 'receita', linha_dre: null, grupo_dfc: null, regra: null, generica: false, sensivel: false })).status).toBe(403)
+      expect((await post(`/plano/${c.json.id}/editar`, 'head', { nome: 'Conta API 2', id_pai: g.json.id, linha_dre: 'RECEITA_BRUTA', grupo_dfc: null, regra: null, generica: false, sensivel: false, ativa: false })).status).toBe(200)
+      const plano = (await get(`/orgs/${ORG.b}/plano`, 'head')).json
+      expect(plano.find((p: any) => p.id_plano_conta === c.json.id)).toMatchObject({ nome: 'Conta API 2', ativa: false, regra_competencia: 'mes_anterior', titulos: 0 })
+      expect((await get(`/orgs/${ORG.b}/plano-contas`, 'analista')).json.find((p: any) => p.id_plano_conta === c.json.id).ativa).toBe(false)
+      const f = (await get('/fechamentos?competencia=2026-10-01', 'analista')).json[0]
+      expect(f.prazo === null || /^\d{4}-\d{2}-\d{2}/.test(f.prazo)).toBe(true)
+    })
+  })
+
   it('rota inexistente → 404 (depois do portão)', async () => expect((await get('/nada', 'analista')).status).toBe(404))
 })
 

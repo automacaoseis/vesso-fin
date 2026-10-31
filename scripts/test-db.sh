@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Todos os testes do banco, cada um num banco NOVO com locale ICU (como produção):
-#   núcleo (test/10) · importação (0002 + conferência) · 0004 (test/30) · 0005 (test/40) · 0007 (test/50) · 0008 (test/60) · 0009 (test/70) · 0010 (test/80) · 0011 (test/90) — sempre com todas as migrations.
+#   núcleo (test/10) · importação (0002 + conferência) · 0004 (test/30) · 0005 (test/40) · 0007 (test/50) · 0008 (test/60) · 0009 (test/70) · 0010 (test/80) · 0011 (test/90) · 0012 (test/95) — sempre com todas as migrations.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 command -v psql >/dev/null || export PATH="$(brew --prefix postgresql@16)/bin:$PATH"
-MIGS=(sql/0001_bpo_fin_nucleo.sql sql/0003_bpo_fin_search_path_funcoes_hash.sql sql/0004_bpo_fin_upload_extrato_desfazer_transferencia.sql sql/0005_bpo_fin_sync_asaas.sql sql/0007_bpo_fin_informar_saldo.sql sql/0008_bpo_fin_acessos.sql sql/0009_bpo_fin_documentos.sql sql/0010_bpo_fin_portal_cliente.sql sql/0011_bpo_fin_cadastro.sql)
+MIGS=(sql/0001_bpo_fin_nucleo.sql sql/0003_bpo_fin_search_path_funcoes_hash.sql sql/0004_bpo_fin_upload_extrato_desfazer_transferencia.sql sql/0005_bpo_fin_sync_asaas.sql sql/0007_bpo_fin_informar_saldo.sql sql/0008_bpo_fin_acessos.sql sql/0009_bpo_fin_documentos.sql sql/0010_bpo_fin_portal_cliente.sql sql/0011_bpo_fin_cadastro.sql sql/0012_bpo_fin_plano_modelo_feriados.sql)
 STUBS=(test/00_stubs_supabase.sql test/01_stub_vault.sql)
 novo() { dropdb --if-exists "$1" 2>/dev/null; createdb --template=template0 --locale-provider=icu --icu-locale=en-US --locale=en_US.UTF-8 "$1"; }
 aplicar() { local db=$1; shift; local args=(); for f in "$@"; do args+=(-f "$f"); done; psql -d "$db" -v ON_ERROR_STOP=1 -q "${args[@]}" >/dev/null 2>&1; }
@@ -52,4 +52,8 @@ novo vf_t11; aplicar vf_t11 "${STUBS[@]}" "${MIGS[@]}" apps/api/test/seed.sql
 saida=$(psql -d vf_t11 -v ON_ERROR_STOP=1 -q -f test/90_testes_0011.sql 2>&1 || true)
 n=$(grep -c "NOTICE:  ok" <<<"$saida" || true)
 if grep -q "TODOS OS TESTES DA 0011 PASSARAM" <<<"$saida"; then echo "0011: $n ok"; else echo "0011 FALHOU"; grep -E "ERROR|FALHA" <<<"$saida"; falhou=1; fi
+novo vf_t12; aplicar vf_t12 "${STUBS[@]}" "${MIGS[@]}" apps/api/test/seed.sql
+saida=$(psql -d vf_t12 -v ON_ERROR_STOP=1 -q -f test/95_testes_0012.sql 2>&1 || true)
+n=$(grep -c "NOTICE:  ok" <<<"$saida" || true)
+if grep -q "TODOS OS TESTES DA 0012 PASSARAM" <<<"$saida"; then echo "0012: $n ok"; else echo "0012 FALHOU"; grep -E "ERROR|FALHA" <<<"$saida"; falhou=1; fi
 exit $falhou

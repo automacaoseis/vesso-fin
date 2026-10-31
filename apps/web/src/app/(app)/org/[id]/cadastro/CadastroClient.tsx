@@ -66,8 +66,9 @@ export default function CadastroClient({ d, turmas }: { d: DadosCadastro; turmas
       <Painel aria-label="Plano de contas" rotulo="Plano de contas">
         <div style={{ padding: '12px 16px', fontSize: 13, color: theme.text2 }}>
           {d.plano.itens === 0
-            ? <span style={{ color: theme.negative }}>▲ Sem plano de contas: não dá para categorizar nem montar DRE. Ajustar o plano ainda é por SQL (tela de plano na próxima etapa).</span>
-            : <>{d.plano.itens} contas, {d.plano.analiticas} que recebem lançamento. Ver no <Link href={`/org/${d.org.id_org}/relatorios`} style={{ color: theme.accent }}>DRE</Link>.</>}
+            ? <span style={{ color: theme.negative }}>▲ Sem plano de contas: não dá para categorizar nem montar DRE. </span>
+            : <>{d.plano.itens} contas, {d.plano.analiticas} que recebem lançamento. </>}
+          <Link href={`/org/${d.org.id_org}/plano`} style={{ color: theme.accent }}>{d.plano.itens === 0 ? 'Montar o plano →' : 'Editar plano →'}</Link>
         </div>
       </Painel>
       {aviso && <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso>}

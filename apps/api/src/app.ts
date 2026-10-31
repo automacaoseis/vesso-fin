@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono'
 import type pg from 'pg'
 import type { z } from 'zod'
 import {
-  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, qCompetencia, bConcederAcesso, bPedirDocumento, bValidarDocumento, qDocumentos, bCriarOrg, bAtualizarOrg, bLigarPortal, bCriarEntidade, bCriarConta, qBuscaCliente, bRevisar, bTempoIniciar, bTempoParar,
+  ACOES, bCategorizar, bCategorizarLote, qTitulos, bConciliar, bCriarTitulo, bIgnorar, bLancarEConciliar, bMotivo, bReabrir, bInformarSaldo, qCompetencia, bConcederAcesso, bPedirDocumento, bValidarDocumento, qDocumentos, bCriarOrg, bAtualizarOrg, bLigarPortal, bCriarEntidade, bCriarConta, qBuscaCliente, bCriarPlanoConta, bEditarPlanoConta, bRevisar, bTempoIniciar, bTempoParar,
   bTransferencia, qFato, qMovimentos, qPeriodo, qTitulosAbertos, zCompetencia, zId, type ErroApi,
 } from '@vesso-fin/shared'
 import { CABECALHO_SERVICO, verificarServico } from '@vesso-fin/shared/servico'
@@ -96,7 +96,7 @@ export function criarApp(deps: Deps) {
        from bpo_fin.contas where id_org = $1 order by apelido`, [param(c, 'id')]))))
 
   app.get('/orgs/:id/plano-contas', async (c) => c.json(await ler(c, (q) => q(
-    `select id_plano_conta, id_pai, codigo, nome, natureza, aceita_lancamento, regra_competencia, generica, entra_dre, entra_dfc
+    `select id_plano_conta, id_pai, codigo, nome, natureza, aceita_lancamento, regra_competencia, generica, entra_dre, entra_dfc, ativa
        from bpo_fin.plano_contas where id_org = $1 order by codigo`, [param(c, 'id')]))))
 
   // ─── conciliação ─────────────────────────────────────────────────────────────────
@@ -538,7 +538,8 @@ export function criarApp(deps: Deps) {
       `select o.id_org, o.nome, o.tipo, o.status as status_org, o.competencia_inicial, o.turma_fechamento, t.dia_util_limite,
               coalesce(f.status, 'aberto') as status, f.executor, f.enviado_revisao_em, f.revisor, f.revisado_em,
               f.liberado_em, coalesce(f.reaberturas, 0) as reaberturas,
-              ck.total::int as itens, ck.ok::int as itens_ok, ck.bloqueios::int as bloqueios
+              ck.total::int as itens, ck.ok::int as itens_ok, ck.bloqueios::int as bloqueios,
+              case when t.dia_util_limite is not null then bpo_fin.fn_prazo_fechamento($1, t.dia_util_limite) end as prazo  -- com feriados (0012)
          from bpo_fin.organizacoes o
          left join bpo_fin.turmas_fechamento t on t.codigo = o.turma_fechamento
          left join bpo_fin.fechamento_mensal f on f.id_org = o.id_org and f.competencia = $1
@@ -642,6 +643,27 @@ export function criarApp(deps: Deps) {
   app.post('/contas/:id/desativar', async (c) => {
     const b = await corpo(c, bMotivo)
     await escrever(c, (q) => q(`select bpo_fin.fn_desativar_conta($1, $2)`, [param(c, 'id'), b.motivo]))
+    return c.json({ ok: true })
+  })
+
+  // ─── plano de contas pela tela (0012) ─────────────────────────────────────────────
+  app.get('/orgs/:id/plano', async (c) => c.json(await ler(c, (q) => q(
+    `select p.id_plano_conta, p.id_pai, p.codigo, p.nome, p.natureza, p.aceita_lancamento, p.entra_dre, p.entra_dfc, p.grupo_dfc,
+            p.linha_dre, p.regra_competencia, p.generica, p.sensivel, p.ativa,
+            (select count(*)::int from bpo_fin.titulos t where t.id_plano_conta = p.id_plano_conta and t.cancelado_em is null) as titulos
+       from bpo_fin.plano_contas p where p.id_org = $1 order by p.codigo`, [param(c, 'id')]))))
+
+  app.post('/orgs/:id/plano', async (c) => {
+    const b = await corpo(c, bCriarPlanoConta)
+    const [r] = await escrever(c, (q) => q(`select bpo_fin.fn_criar_plano_conta($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) as id`,
+      [param(c, 'id'), b.codigo, b.nome, b.id_pai, b.natureza, b.linha_dre, b.grupo_dfc, b.regra, b.generica, b.sensivel]))
+    return c.json({ ok: true, id: r!.id }, 201)
+  })
+
+  app.post('/plano/:id/editar', async (c) => {
+    const b = await corpo(c, bEditarPlanoConta)
+    await escrever(c, (q) => q(`select bpo_fin.fn_editar_plano_conta($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [param(c, 'id'), b.nome, b.id_pai, b.linha_dre, b.grupo_dfc, b.regra, b.generica, b.sensivel, b.ativa]))
     return c.json({ ok: true })
   })
 

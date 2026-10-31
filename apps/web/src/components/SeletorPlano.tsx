@@ -6,7 +6,7 @@ import { useId, useMemo, useState } from 'react'
 import { theme } from '@/lib/theme'
 import { campoCompacto } from './fin-ui'
 
-export interface ContaPlano { id_plano_conta: string; codigo: string; nome: string; natureza: string; aceita_lancamento: boolean; regra_competencia: string; generica: boolean }
+export interface ContaPlano { id_plano_conta: string; codigo: string; nome: string; natureza: string; aceita_lancamento: boolean; regra_competencia: string; generica: boolean; ativa?: boolean }
 
 export default function SeletorPlano({ plano, valor, onEscolher, autoFocus, placeholder = 'Buscar conta por código ou nome', largura = '100%' }: {
   plano: ContaPlano[]; valor: string | null; onEscolher: (c: ContaPlano) => void; autoFocus?: boolean; placeholder?: string; largura?: number | string
@@ -18,7 +18,8 @@ export default function SeletorPlano({ plano, valor, onEscolher, autoFocus, plac
   const [idx, setIdx] = useState(0)
   const lista = useMemo(() => {
     const t = q.trim().toLowerCase()
-    return plano.filter((p) => p.aceita_lancamento && (!t || `${p.codigo} ${p.nome}`.toLowerCase().includes(t))).slice(0, 60)
+    // conta desativada (0012) some do seletor; o que já foi lançado nela continua mostrando o nome
+    return plano.filter((p) => p.aceita_lancamento && p.ativa !== false && (!t || `${p.codigo} ${p.nome}`.toLowerCase().includes(t))).slice(0, 60)
   }, [plano, q])
   const escolher = (p: ContaPlano) => { onEscolher(p); setQ(''); setAberto(false) }
   return (

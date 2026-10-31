@@ -16,6 +16,7 @@ interface LinhaFech {
   status: 'aberto' | 'em_revisao' | 'fechado' | 'liberado'; executor: string | null; enviado_revisao_em: string | null
   revisor: string | null; revisado_em: string | null; liberado_em: string | null; reaberturas: number
   itens: number; itens_ok: number; bloqueios: number
+  prazo: string | null   // N-ésimo dia útil do mês seguinte, sem fim de semana nem feriado (bpo_fin.fn_prazo_fechamento, 0012)
 }
 
 const STATUS = {
@@ -25,16 +26,6 @@ const STATUS = {
   liberado: { icone: '✓', rotulo: 'Liberado', cor: theme.positive },
 } as const
 
-// Prazo da turma: N-ésimo dia útil (seg–sex) do mês seguinte à competência. Feriados ainda não entram.
-function prazo(competencia: string, n: number) {
-  const d = new Date(Date.UTC(+competencia.slice(0, 4), +competencia.slice(5, 7), 1))
-  let uteis = 0
-  for (;;) {
-    const dow = d.getUTCDay()
-    if (dow !== 0 && dow !== 6 && ++uteis === n) return d.toISOString().slice(0, 10)
-    d.setUTCDate(d.getUTCDate() + 1)
-  }
-}
 const br = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`
 const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
 
@@ -49,7 +40,7 @@ export default async function Fechamentos({ searchParams }: { searchParams: Prom
 
   const comPrazo = linhas.map((l) => {
     const historico = !!l.competencia_inicial && comp < l.competencia_inicial
-    const limite = l.dia_util_limite && !historico ? prazo(comp, l.dia_util_limite) : null
+    const limite = !historico ? l.prazo?.slice(0, 10) ?? null : null
     const atrasado = !!limite && limite < hoje && (l.status === 'aberto' || l.status === 'em_revisao')
     return { ...l, historico, limite, atrasado }
   })
@@ -118,7 +109,7 @@ export default async function Fechamentos({ searchParams }: { searchParams: Prom
               </table>
             </div>
           </Painel>
-          <div style={{ fontSize: 11.5, color: theme.text3 }}>Prazo = dia útil limite da turma (A: 6º, B: 10º, C: 14º) no mês seguinte, contando segunda a sexta — feriados ainda não são descontados.</div>
+          <div style={{ fontSize: 11.5, color: theme.text3 }}>Prazo = dia útil limite da turma (A: 6º, B: 10º, C: 14º) no mês seguinte, contando dia útil: sem fim de semana nem feriado nacional/bancário (Carnaval, Sexta-feira Santa e Corpus Christi inclusos). Feriado municipal ainda não entra.</div>
         </>
       )}
     </div>
