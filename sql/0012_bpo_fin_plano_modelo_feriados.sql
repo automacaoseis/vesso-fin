@@ -11,6 +11,7 @@
 --   · desativar tira a conta dos seletores; o que já foi lançado nela continua. Grupo com filha ativa não desativa.
 -- Feriados: nacionais e bancários (Carnaval, Sexta-feira Santa e Corpus Christi incluídos — banco não compensa).
 -- Municipais ficam de fora por ora (a org não tem município cadastrado).
+-- Aplicada em produção em 31/10/2026 (MCP) como 20261031175153_bpo_fin_0012_plano_modelo_feriados.
 begin;
 
 -- ─── feriados e dia útil ─────────────────────────────────────────────────────────────────

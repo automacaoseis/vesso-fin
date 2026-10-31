@@ -13,8 +13,8 @@
 | 20261030125436 | sql/0008_bpo_fin_acessos.sql (30/10, MCP: conceder/revogar/listar acesso, e-mail das pessoas) |
 | 20261030150000 | sql/0009_bpo_fin_documentos.sql (30/10, SQL Editor: documentos + bucket `bpo-fin` com policy por `id_org/`) |
 | 20261030170000 | sql/0010_bpo_fin_portal_cliente.sql (30/10, SQL Editor: `public.fn_cliente_fin_*` p/ o portal, só mês liberado) |
-| — | sql/0011_bpo_fin_cadastro.sql — **NÃO aplicada** (cadastro mínimo; org casa no portal via `id_cliente_portal`) |
-| — | sql/0012_bpo_fin_plano_modelo_feriados.sql — **NÃO aplicada** (plano pela tela, modelo "Clínica médica", feriados no prazo) |
+| 20261031175046 | sql/0011_bpo_fin_cadastro.sql (31/10, MCP: cadastro mínimo; org casa no portal via `id_cliente_portal`; correções da revisão em 0007/0009/0010) |
+| 20261031175153 | sql/0012_bpo_fin_plano_modelo_feriados.sql (31/10, MCP: plano pela tela, modelo "Clínica médica", feriados no prazo) |
 
 O MCP do Supabase aplica migration só aditiva; recusa o que toca `storage` ou tem `drop`/`delete` → SQL Editor + linha em
 `supabase_migrations.schema_migrations` (o script de cada uma já inclui).
@@ -61,11 +61,10 @@ Portal do cliente (`vesso-clientes`, branch `financeiro-bpo`, commit local, SEM 
 Testes: `scripts/test-db.sh` (núcleo + importação + 0004–0012) e `scripts/test-api.sh` (77).
 
 ## Pendências (31/10)
-- Aplicar 0011 e 0012 (precisa do "sim" do Luiz).
 - Railway: `SUPABASE_PUBLISHABLE_KEY` na API (upload de documentos) e criar o serviço do worker.
 - GitHub: secret `VERCEL_DEPLOY_HOOK`; decidir se o repo volta a privado (este arquivo e docs/ têm dado de negócio).
 - Vault: chaves do Asaas (docs/pos-importacao.sql passos 3–6).
 - Conferência: o financeiro_seis segue recebendo lançamento depois da importação → decidir quando ele para e o que fazer
   com set–out/26 (importação complementar ou lançamento manual).
-- Portal: ligar a Agência Seis ao cliente "Seis e Marketing (comercial interno)", login de teste, liberar um mês, deploy.
+- Portal: Agência Seis JÁ ligada ao cliente "Seis e Marketing (comercial interno)" (31/10). Falta: login de teste, liberar um mês, deploy do branch.
 - Tema do vesso-clientes × vesso-admin (decisão do Luiz).

@@ -2,6 +2,7 @@
 -- Por quê: docs/PROMPT.md §7 — "cadastro mínimo" entra na Fase 1b, quando cadastrar por SQL começa a doer.
 -- E o Luiz decidiu (30/10) que a Agência Seis (org CASA, com o histórico importado) é a primeira a aparecer no
 -- portal, pelo cliente "Seis e Marketing (comercial interno)".
+-- Aplicada em produção em 31/10/2026 (MCP) como 20261031175046_bpo_fin_0011_cadastro.
 -- Inclui (fim do arquivo) correções da revisão de 31/10 em funções já em produção: fn_informar_saldo (0007),
 -- fn_anexar_documento (0009) e public.fn_cliente_fin_anexar (0010).
 -- Desenho:
