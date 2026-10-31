@@ -16,7 +16,7 @@
 | 20261031175046 | sql/0011_bpo_fin_cadastro.sql (31/10, MCP: cadastro mínimo; org casa no portal via `id_cliente_portal`; correções da revisão em 0007/0009/0010) |
 | 20261031175153 | sql/0012_bpo_fin_plano_modelo_feriados.sql (31/10, MCP: plano pela tela, modelo "Clínica médica", feriados no prazo) |
 | 20261031211314 | sql/0013_bpo_fin_conferencia_definer.sql (31/10, MCP: conferência lida por função do dono — a view cortada pela RLS do financeiro_seis mostrava diferença falsa) |
-| 20261031210000 | sql/0014_bpo_fin_importacao_complementar_seis.sql (31/10, SQL Editor: SÓ as funções do complemento; simulação feita, aplicar depende do Luiz) |
+| 20261031210000 | sql/0014_bpo_fin_importacao_complementar_seis.sql (31/10, SQL Editor: funções; complemento APLICADO em 31/10 com OK do Luiz — 73 movimentos e 67 títulos; conferência sem diferença em nenhum mês) |
 
 O MCP do Supabase aplica migration só aditiva; recusa o que toca `storage` ou tem `drop`/`delete` → SQL Editor + linha em
 `supabase_migrations.schema_migrations` (o script de cada uma já inclui).
@@ -66,7 +66,8 @@ Testes: `scripts/test-db.sh` (núcleo + importação + 0004–0012) e `scripts/t
 - Railway: `SUPABASE_PUBLISHABLE_KEY` na API (upload de documentos) e criar o serviço do worker.
 - GitHub: secret `VERCEL_DEPLOY_HOOK`; decidir se o repo volta a privado (este arquivo e docs/ têm dado de negócio).
 - Vault: chaves do Asaas (docs/pos-importacao.sql passos 3–6).
-- Conferência: o financeiro_seis segue recebendo lançamento depois da importação → decidir quando ele para e o que fazer
-  com set–out/26 (importação complementar ou lançamento manual).
+- Conferência: complemento aplicado em 31/10 (tudo bate). Se o financeiro_seis continuar recebendo lançamento de out/26 para
+  trás, rodar de novo `select bpo_fin.fn_simular_complemento_seis()` e, se fizer sentido, `fn_importar_complemento_seis(…, true)`.
+  Decidir quando o financeiro_seis para de ser usado (de nov/26 em diante o lançamento é no Vesso FIN).
 - Portal: Agência Seis JÁ ligada ao cliente "Seis e Marketing (comercial interno)" (31/10). Falta: login de teste, liberar um mês, deploy do branch.
 - Tema do vesso-clientes × vesso-admin (decisão do Luiz).
