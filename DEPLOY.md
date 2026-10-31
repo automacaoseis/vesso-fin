@@ -48,3 +48,15 @@ Railway e Vercel puxam do GitHub. Criar o repositório privado `vesso-fin` e dar
 2. Entrar como você: aparecem Agência Seis e Task SV. Entrar como um gestor de tráfego qualquer: zero organizações.
 3. Conexões → importar um OFX do Nubank → "Processado" em segundos; reimportar o mesmo → "já tinha sido importado".
 4. Railway → logs do worker: `{"nivel":"info","tipo":"sync_asaas",…}` depois de `select bpo_fin.fn_agendar_sync_asaas();`.
+5. Documentos (precisa de `SUPABASE_PUBLISHABLE_KEY` na API): numa org, Pedir documento → Anexar arquivo (PDF) → clicar no
+   nome abre o arquivo (link assinado de 2 min). Sem a variável, anexar responde "armazenamento de arquivos não configurado".
+
+## 5. Migrations novas (0007+)
+Ordem sempre: Postgres local (`scripts/test-db.sh`) → produção com confirmação do Luiz. O MCP aplica as só aditivas; as que
+tocam `storage` ou têm `drop`/`delete` vão pelo SQL Editor com o script que já registra a versão em
+`supabase_migrations.schema_migrations`. Depois: copiar para `seis-sistema/supabase/migrations/<versão>_<nome>.sql`.
+
+## 6. Portal do cliente (vesso-clientes)
+A aba Financeiro está no branch `financeiro-bpo` de `~/antigravity/vesso-clientes`. Ela só aparece para cliente com org no BPO
+(`fn_cliente_fin_acesso`) e só mostra mês LIBERADO. Deploy do portal: o fluxo de lá (`npm run build && npx vercel --prod --yes
+--scope automacoesseisemarketing-3154s-projects`), só depois de testar com um login de portal real.

@@ -1,4 +1,4 @@
-# Vesso FIN — status (23/10/2026)
+# Vesso FIN — status (31/10/2026)
 
 ## Banco: APLICADO em produção (gzdvkqzliyupiuyaqkpj, Postgres 17.6)
 | Versão no histórico do Supabase | Arquivo |
@@ -9,6 +9,15 @@
 | 20261026153011 | sql/0004_bpo_fin_upload_extrato_desfazer_transferencia.sql (aplicada em 26/10, `fn_registrar_extrato` + `fn_desfazer_transferencia`) |
 | 20261027133109 | sql/0005_bpo_fin_sync_asaas.sql (aplicada em 27/10: `fn_segredo_da_conexao` só p/ worker, `fn_agendar_sync_asaas`, cron `bpo_fin_sync_asaas` 09:00 UTC) |
 | 20261027165200 | sql/0006_bpo_fin_importacao_uma_org_por_empresa.sql (aplicada pelo SQL Editor em 27/10: importação cria UMA org casa por empresa — Agência Seis e Task SV; conferência por org × mês; grant da view) |
+| 20261030112211 | sql/0007_bpo_fin_informar_saldo.sql (30/10, MCP: saldo informado à mão p/ conta sem extrato/API) |
+| 20261030125436 | sql/0008_bpo_fin_acessos.sql (30/10, MCP: conceder/revogar/listar acesso, e-mail das pessoas) |
+| 20261030150000 | sql/0009_bpo_fin_documentos.sql (30/10, SQL Editor: documentos + bucket `bpo-fin` com policy por `id_org/`) |
+| 20261030170000 | sql/0010_bpo_fin_portal_cliente.sql (30/10, SQL Editor: `public.fn_cliente_fin_*` p/ o portal, só mês liberado) |
+| — | sql/0011_bpo_fin_cadastro.sql — **NÃO aplicada** (cadastro mínimo; org casa no portal via `id_cliente_portal`) |
+| — | sql/0012_bpo_fin_plano_modelo_feriados.sql — **NÃO aplicada** (plano pela tela, modelo "Clínica médica", feriados no prazo) |
+
+O MCP do Supabase aplica migration só aditiva; recusa o que toca `storage` ou tem `drop`/`delete` → SQL Editor + linha em
+`supabase_migrations.schema_migrations` (o script de cada uma já inclui).
 
 Cópias com esses nomes exatos estão em `seis-sistema/supabase/migrations/` (sem commit), para o `supabase db push` de lá não estranhar o histórico.
 
@@ -45,7 +54,18 @@ Mesmos números do ensaio acima; nao_explicado = 0 em todos os meses das duas or
 = sha256(`00000000-0000-0000-0000-000000000001|2026-10-01|-50.00|PIX TESTE|0`)
 = `7fce8b012c186feb30c5c55b5a80e57e3468f10762833ec3a157e499efb85974` (conferido em produção e em Python)
 
-## Próximo
-1. Monorepo (`apps/web`, `apps/api`, `packages/shared`) + `fmtBRL` + hash em TS com o vetor acima.
-2. API (Hono na Railway): HMAC de serviço + JWT (confirmar JWKS × JWT secret) + `set local role authenticated`.
-3. Tela de Conciliação.
+## App (web na Vercel, API na Railway)
+Telas: Organizações (+ nova) · Fila · Fechamentos · Pendências · Conexões · Equipe · Acessos · Conferência (dono) ·
+por org: Resumo, Conciliação, Lançamentos, A pagar e receber, Relatórios, Documentos, Fechamento, Cadastro, Plano de contas.
+Portal do cliente (`vesso-clientes`, branch `financeiro-bpo`, commit local, SEM deploy): Meu caixa, Relatórios, Documentos.
+Testes: `scripts/test-db.sh` (núcleo + importação + 0004–0012) e `scripts/test-api.sh` (77).
+
+## Pendências (31/10)
+- Aplicar 0011 e 0012 (precisa do "sim" do Luiz).
+- Railway: `SUPABASE_PUBLISHABLE_KEY` na API (upload de documentos) e criar o serviço do worker.
+- GitHub: secret `VERCEL_DEPLOY_HOOK`; decidir se o repo volta a privado (este arquivo e docs/ têm dado de negócio).
+- Vault: chaves do Asaas (docs/pos-importacao.sql passos 3–6).
+- Conferência: o financeiro_seis segue recebendo lançamento depois da importação → decidir quando ele para e o que fazer
+  com set–out/26 (importação complementar ou lançamento manual).
+- Portal: ligar a Agência Seis ao cliente "Seis e Marketing (comercial interno)", login de teste, liberar um mês, deploy.
+- Tema do vesso-clientes × vesso-admin (decisão do Luiz).
