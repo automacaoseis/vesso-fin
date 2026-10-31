@@ -10,6 +10,7 @@
 --   · Só até p_ate (padrão 31/10/2026): de novembro em diante quem manda é o Vesso FIN (competencia_inicial).
 --   · p_aplicar = false (padrão) = SIMULAÇÃO: faz tudo e desfaz, devolvendo o relatório. true = grava.
 -- Roda como postgres (sem grant para ninguém), como a importação original.
+-- Aplicada em produção em 31/10/2026 (SQL Editor) como 20261031210000_bpo_fin_0014_importacao_complementar_seis (só as funções; rodar é outro passo).
 begin;
 
 create function bpo_fin.fn_importar_complemento_seis(p_ate date default '2026-10-31', p_aplicar boolean default false)

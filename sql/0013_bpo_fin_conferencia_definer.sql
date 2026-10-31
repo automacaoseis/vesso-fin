@@ -5,6 +5,7 @@
 -- até 2028; lida como administrador eram 2 meses (out e nov/26). O conferido tem que ser o dado inteiro.
 -- Desenho: função SECURITY DEFINER que exige fn_eh_dono() e devolve a view. Só o dono executa (a checagem é dentro);
 -- a view continua existindo para leitura administrativa.
+-- Aplicada em produção em 31/10/2026 (MCP) como 20261031211314_bpo_fin_0013_conferencia_definer.
 begin;
 
 -- colunas explícitas (e plpgsql): a função existe mesmo onde a view da importação não existe (testes da API)

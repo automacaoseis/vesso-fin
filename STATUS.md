@@ -15,6 +15,8 @@
 | 20261030170000 | sql/0010_bpo_fin_portal_cliente.sql (30/10, SQL Editor: `public.fn_cliente_fin_*` p/ o portal, só mês liberado) |
 | 20261031175046 | sql/0011_bpo_fin_cadastro.sql (31/10, MCP: cadastro mínimo; org casa no portal via `id_cliente_portal`; correções da revisão em 0007/0009/0010) |
 | 20261031175153 | sql/0012_bpo_fin_plano_modelo_feriados.sql (31/10, MCP: plano pela tela, modelo "Clínica médica", feriados no prazo) |
+| 20261031211314 | sql/0013_bpo_fin_conferencia_definer.sql (31/10, MCP: conferência lida por função do dono — a view cortada pela RLS do financeiro_seis mostrava diferença falsa) |
+| 20261031210000 | sql/0014_bpo_fin_importacao_complementar_seis.sql (31/10, SQL Editor: SÓ as funções do complemento; simulação feita, aplicar depende do Luiz) |
 
 O MCP do Supabase aplica migration só aditiva; recusa o que toca `storage` ou tem `drop`/`delete` → SQL Editor + linha em
 `supabase_migrations.schema_migrations` (o script de cada uma já inclui).
