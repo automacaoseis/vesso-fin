@@ -60,4 +60,10 @@ novo vf_t12; aplicar vf_t12 "${STUBS[@]}" "${MIGS[@]}" apps/api/test/seed.sql
 saida=$(psql -d vf_t12 -v ON_ERROR_STOP=1 -q -f test/95_testes_0012.sql 2>&1 || true)
 n=$(grep -c "NOTICE:  ok" <<<"$saida" || true)
 if grep -q "TODOS OS TESTES DA 0012 PASSARAM" <<<"$saida"; then echo "0012: $n ok"; else echo "0012 FALHOU"; grep -E "ERROR|FALHA" <<<"$saida"; falhou=1; fi
+novo vf_t14; aplicar vf_t14 "${STUBS[@]}" test/20_stub_financeiro_seis.sql sql/0001_bpo_fin_nucleo.sql sql/0002_bpo_fin_importa_historico_seis.sql "${MIGS[@]:1}" sql/0006_bpo_fin_importacao_uma_org_por_empresa.sql
+psql -d vf_t14 -v ON_ERROR_STOP=1 -Atqc "select bpo_fin.fn_importar_historico_seis('2026-11-01')" >/dev/null
+aplicar vf_t14 sql/0014_bpo_fin_importacao_complementar_seis.sql
+saida=$(psql -d vf_t14 -v ON_ERROR_STOP=1 -q -f test/27_testes_0014.sql 2>&1 || true)
+n=$(grep -c "NOTICE:  ok" <<<"$saida" || true)
+if grep -q "TODOS OS TESTES DA 0014 PASSARAM" <<<"$saida"; then echo "0014: $n ok"; else echo "0014 FALHOU"; grep -E "ERROR|FALHA" <<<"$saida"; falhou=1; fi
 exit $falhou
