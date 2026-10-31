@@ -10,7 +10,7 @@ createdb --template=template0 --locale-provider=icu --icu-locale=en-US --locale=
 psql -d "$DB" -v ON_ERROR_STOP=1 -q -f test/00_stubs_supabase.sql -f test/01_stub_vault.sql -f sql/0001_bpo_fin_nucleo.sql \
   -f sql/0003_bpo_fin_search_path_funcoes_hash.sql \
   -f sql/0004_bpo_fin_upload_extrato_desfazer_transferencia.sql \
-  -f sql/0005_bpo_fin_sync_asaas.sql -f sql/0007_bpo_fin_informar_saldo.sql -f sql/0008_bpo_fin_acessos.sql -f sql/0009_bpo_fin_documentos.sql -f sql/0010_bpo_fin_portal_cliente.sql -f sql/0011_bpo_fin_cadastro.sql -f sql/0012_bpo_fin_plano_modelo_feriados.sql -f apps/api/test/seed.sql >/dev/null 2>&1
+  -f sql/0005_bpo_fin_sync_asaas.sql -f sql/0007_bpo_fin_informar_saldo.sql -f sql/0008_bpo_fin_acessos.sql -f sql/0009_bpo_fin_documentos.sql -f sql/0010_bpo_fin_portal_cliente.sql -f sql/0011_bpo_fin_cadastro.sql -f sql/0012_bpo_fin_plano_modelo_feriados.sql -f sql/0013_bpo_fin_conferencia_definer.sql -f apps/api/test/seed.sql >/dev/null 2>&1
 psql -d "$DB" -q -c "alter role vesso_fin_api with login password 'teste-local'" -c "alter role vesso_fin_worker with login password 'teste-local'" >/dev/null
 DATABASE_URL_API="postgres://vesso_fin_api:teste-local@localhost/$DB" \
 DATABASE_URL_WORKER="postgres://vesso_fin_worker:teste-local@localhost/$DB" pnpm --filter @vesso-fin/api exec vitest run "$@"

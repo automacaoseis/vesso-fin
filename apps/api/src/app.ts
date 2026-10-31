@@ -562,11 +562,9 @@ export function criarApp(deps: Deps) {
        from bpo_fin.extratos where id_conexao = $1 order by recebido_em desc limit 20`, [param(c, 'id')]))))
 
   // Só o dono: compara com o financeiro_seis, que é da casa (Agência Seis e Task SV, uma org cada).
-  app.get('/conferencia-seis', async (c) => c.json(await ler(c, async (q) => {
-    if (!(await q<{ d: boolean }>(`select bpo_fin.fn_eh_dono() d`))[0]!.d)
-      throw new ErroHttp(403, { erro: 'sem_permissao', mensagem: 'só o dono vê a conferência da Seis' })
-    return q(`select * from bpo_fin.v_conferencia_dre_seis order by organizacao, competencia`)   // uma linha por org casa × mês (0006)
-  })))
+  // ⚠️ Pela função (0013), não pela view: a view é security_invoker e o financeiro_seis tem RLS própria — lida como o
+  // usuário, o lado "financeiro_seis" vinha cortado. A função exige dono e lê o dado inteiro. Uma linha por org casa × mês.
+  app.get('/conferencia-seis', async (c) => c.json(await ler(c, (q) => q(`select * from bpo_fin.fn_conferencia_dre_seis()`))))
 
   // ─── cadastro (0011) ──────────────────────────────────────────────────────────────
   app.get('/cadastro/opcoes', async (c) => c.json(await ler(c, async (q) => {

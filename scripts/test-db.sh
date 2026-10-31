@@ -23,6 +23,10 @@ if [[ $nx == 0/* ]]; then echo "importação: nao_explicado = 0 em ${nx#0/} linh
 saida=$(psql -d vf_t2 -v ON_ERROR_STOP=1 -q -f test/25_testes_0006.sql 2>&1 || true)
 n=$(grep -c "NOTICE:  ok" <<<"$saida" || true)
 if grep -q "TODOS OS TESTES DA 0006 PASSARAM" <<<"$saida"; then echo "0006: $n ok"; else echo "0006 FALHOU"; grep -E "ERROR|FALHA" <<<"$saida"; falhou=1; fi
+aplicar vf_t2 sql/0013_bpo_fin_conferencia_definer.sql
+saida=$(psql -d vf_t2 -v ON_ERROR_STOP=1 -q -f test/26_testes_0013.sql 2>&1 || true)
+n=$(grep -c "NOTICE:  ok" <<<"$saida" || true)
+if grep -q "TODOS OS TESTES DA 0013 PASSARAM" <<<"$saida"; then echo "0013: $n ok"; else echo "0013 FALHOU"; grep -E "ERROR|FALHA" <<<"$saida"; falhou=1; fi
 
 novo vf_t4; aplicar vf_t4 "${STUBS[@]}" "${MIGS[@]}" apps/api/test/seed.sql
 saida=$(psql -d vf_t4 -v ON_ERROR_STOP=1 -q -f test/30_testes_0004.sql 2>&1 || true)
