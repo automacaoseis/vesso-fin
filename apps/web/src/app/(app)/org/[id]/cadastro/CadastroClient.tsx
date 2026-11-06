@@ -177,15 +177,15 @@ function NovaConta({ idOrg, entidades, onFeito }: { idOrg: string; entidades: Da
         if (onFeito(r as Res, 'Conta criada')) setAberto(false)
       }}>
       {entidades.length > 1 && <CampoRotulado rotulo="CNPJ"><select value={entidade} onChange={(e) => setEntidade(e.target.value)} style={estiloCampo}>{entidades.map((e) => <option key={e.id_entidade} value={e.id_entidade}>{e.nome_fantasia ?? e.razao_social}</option>)}</select></CampoRotulado>}
-      <CampoRotulado rotulo="Tipo"><select value={tipo} onChange={(e) => setTipo(e.target.value)} style={estiloCampo}>{TIPOS_CONTA.map((t) => <option key={t} value={t}>{ROT_TIPO[t]}</option>)}</select></CampoRotulado>
+      <CampoRotulado rotulo="Tipo"><select value={tipo} onChange={(e) => { setTipo(e.target.value); if (e.target.value === 'adquirente') setMetodo('arquivo_adquirente') }} style={estiloCampo}>{TIPOS_CONTA.map((t) => <option key={t} value={t}>{ROT_TIPO[t]}</option>)}</select></CampoRotulado>
       <CampoRotulado rotulo="Instituição"><input value={instituicao} onChange={(e) => setInstituicao(e.target.value)} placeholder="Nubank, Itaú, Asaas…" style={estiloCampo} /></CampoRotulado>
       <CampoRotulado rotulo="Apelido"><input value={apelido} onChange={(e) => setApelido(e.target.value)} placeholder="Nubank PJ" style={estiloCampo} /></CampoRotulado>
       <CampoRotulado rotulo="Final do número" extra={<span style={{ color: theme.text3 }}>opcional</span>}><input value={final} onChange={(e) => setFinal(e.target.value)} maxLength={6} inputMode="numeric" style={estiloCampo} /></CampoRotulado>
       <CampoRotulado rotulo="Saldo inicial (R$)"><input value={saldo} onChange={(e) => setSaldo(e.target.value)} inputMode="decimal" style={estiloCampo} /></CampoRotulado>
       <CampoRotulado rotulo="Saldo em"><input type="date" value={data} onChange={(e) => setData(e.target.value)} style={estiloCampo} /></CampoRotulado>
-      <CampoRotulado rotulo="Extrato chega por"><select value={metodo} onChange={(e) => setMetodo(e.target.value)} style={estiloCampo}><option value="ofx">Arquivo OFX</option><option value="manual">Manual (saldo informado)</option><option value="">Sem conexão por enquanto</option></select></CampoRotulado>
+      <CampoRotulado rotulo="Extrato chega por"><select value={metodo} onChange={(e) => setMetodo(e.target.value)} style={estiloCampo}><option value="ofx">Arquivo OFX (banco)</option><option value="arquivo_adquirente">Arquivo de vendas da maquininha (CSV)</option><option value="manual">Manual (saldo informado)</option><option value="">Sem conexão por enquanto</option></select></CampoRotulado>
       <div style={{ display: 'flex', gap: 8 }}><button type="submit" disabled={!ok} style={botaoPrimario(!ok)}>Criar</button><button type="button" onClick={() => setAberto(false)} style={botaoSecundario()}>Cancelar</button></div>
-      <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: theme.text3 }}>Saldo inicial = o saldo da conta no fim do dia escolhido, de onde a conciliação parte. API do Asaas é configurada à parte (precisa da chave no cofre do Supabase).</div>
+      <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: theme.text3 }}>Saldo inicial = o saldo da conta no fim do dia escolhido, de onde a conciliação parte. API do Asaas é configurada à parte (precisa da chave no cofre do Supabase). Maquininha: escolha o tipo &quot;Adquirente&quot; — o repasse dela casa com o depósito no banco como transferência.</div>
     </form>
   )
 }

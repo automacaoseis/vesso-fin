@@ -46,7 +46,7 @@ reset role;
 select checar((select count(*) = 1 from bpo_fin.fila_jobs), 'duplicado não cria job');
 select como('00000000-0000-0000-0000-0000000000a1');
 
-select esperar_erro($$select bpo_fin.fn_registrar_extrato('60000000-0000-0000-0000-0000000000b2', 'x.ofx', 'QUJD')$$, 'não recebe arquivo OFX');
+select esperar_erro($$select bpo_fin.fn_registrar_extrato('60000000-0000-0000-0000-0000000000b2', 'x.ofx', 'QUJD')$$, 'não recebe arquivo');
 select esperar_erro($$select bpo_fin.fn_registrar_extrato('60000000-0000-0000-0000-0000000000b1', 'x.ofx', '***')$$, 'arquivo ilegível');
 select esperar_erro($$select bpo_fin.fn_registrar_extrato('60000000-0000-0000-0000-0000000000b1', 'x.ofx', '')$$, 'arquivo vazio');
 select esperar_erro($$select bpo_fin.fn_registrar_extrato('60000000-0000-0000-0000-000000000099', 'x.ofx', 'QUJD')$$, 'conexão não encontrada');

@@ -84,7 +84,7 @@ export const bCriarEntidade = z.object({
 export const bCriarConta = z.object({
   id_entidade: zId, tipo: z.enum(TIPOS_CONTA), instituicao: z.string().trim().min(2).max(80), apelido: z.string().trim().min(2).max(60),
   numero_final: z.string().trim().regex(/^[0-9Xx-]{1,6}$/, 'só o final do número (até 6 dígitos)').optional(),
-  saldo_inicial: zCentavos, data_saldo_inicial: zData, metodo: z.enum(['ofx', 'manual']).nullable(),
+  saldo_inicial: zCentavos, data_saldo_inicial: zData, metodo: z.enum(['ofx', 'manual', 'arquivo_adquirente']).nullable(),
 })
 export const qBuscaCliente = z.object({ q: z.string().trim().min(2).max(60) })
 

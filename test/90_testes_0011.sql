@@ -96,7 +96,7 @@ insert into public.r select 'c1', to_jsonb(bpo_fin.fn_criar_conta('20000000-0000
 select checar((select c.saldo_inicial = 1500.56 and x.metodo = 'ofx' and x.status = 'ativa' from bpo_fin.contas c join bpo_fin.conexoes x using (id_conta)
                where c.id_conta = (select (v #>> '{}')::uuid from public.r where k = 'c1')), 'conta nova com conexão OFX');
 select esperar_erro(format($$select bpo_fin.fn_criar_conta('20000000-0000-0000-0000-00000000000b', %L, 'gateway', 'Asaas', 'Asaas 2', null, 0, '2026-08-31', 'asaas_api')$$,
-  (select v #>> '{}' from public.r where k = 'e2')), 'só OFX ou manual');
+  (select v #>> '{}' from public.r where k = 'e2')), 'API (Asaas) é configurada à parte');
 select esperar_erro(format($$select bpo_fin.fn_criar_conta('20000000-0000-0000-0000-00000000000b', %L, 'banco', 'Nubank', 'nubank filial', null, 0, '2026-08-31', null)$$,
   (select v #>> '{}' from public.r where k = 'e2')), 'esse apelido');
 select esperar_erro($$select bpo_fin.fn_criar_conta('20000000-0000-0000-0000-00000000000b', '30000000-0000-0000-0000-00000000000b', 'banco', 'Nubank', 'Outra', '12345678', 0, '2026-08-31', null)$$, 'numero_final');

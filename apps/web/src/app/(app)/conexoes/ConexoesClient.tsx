@@ -67,7 +67,7 @@ function Linha({ c }: { c: Conexao }) {
       if (e && e.status !== 'recebido') {
         clearInterval(t); setAcompanhando(null); router.refresh()
         setAviso(e.status === 'processado'
-          ? { erro: false, texto: `✓ Processado: ${e.linhas_novas ?? 0} novo(s) de ${e.linhas_lidas ?? 0}${e.linhas_removidas ? ` · ${e.linhas_removidas} sumiram da fonte` : ''}.` }
+          ? { erro: !!e.erro_msg, texto: `✓ Processado: ${e.linhas_novas ?? 0} novo(s) de ${e.linhas_lidas ?? 0}${e.linhas_removidas ? ` · ${e.linhas_removidas} sumiram da fonte` : ''}.${e.erro_msg ? ` ▲ ${e.erro_msg}` : ''}` }
           : { erro: true, texto: e.erro_msg ?? 'falhou ao processar' })
       } else if (++n > 40) {
         clearInterval(t); setAcompanhando(null)
@@ -108,17 +108,19 @@ function Linha({ c }: { c: Conexao }) {
           <span aria-hidden style={{ color: f.mutedText, display: 'inline-block', width: 14 }}>{aberta ? '▾' : '▸'}</span>
           <strong style={{ fontWeight: 600 }}>{c.conta}</strong> <span style={{ color: f.mutedText }}>· {c.instituicao ?? '—'}</span>
         </button>
-        <span style={{ color: f.mutedText, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.06em' }}>{c.metodo.replace('_', ' ')}</span>
+        <span style={{ color: f.mutedText, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.06em' }}>{c.metodo === 'arquivo_adquirente' ? 'maquininha' : c.metodo.replace('_', ' ')}</span>
         <span style={{ color: st.cor, fontWeight: 500 }}>{st.t}</span>
         <span style={{ color: theme.text2 }}>
           importado {quando(c.ultima_importacao_em)} · último movimento {br(c.ultimo_movimento_em)}
           {c.status === 'erro' && c.erro_msg && <span style={{ display: 'block', color: f.negativeText }}>{c.erro_msg}</span>}
         </span>
-        {c.metodo === 'ofx' && c.pode_importar ? (
+        {(c.metodo === 'ofx' || c.metodo === 'arquivo_adquirente') && c.pode_importar ? (
           <>
-            <input ref={input} type="file" accept=".ofx,application/x-ofx" onChange={enviar} hidden aria-label={`Importar OFX em ${c.conta}`} />
+            {/* maquininha (0015): o CSV de vendas exportado do portal da adquirente; banco: o OFX */}
+            <input ref={input} type="file" accept={c.metodo === 'ofx' ? '.ofx,application/x-ofx' : '.csv,.txt,text/csv'} onChange={enviar} hidden
+              aria-label={`${c.metodo === 'ofx' ? 'Importar OFX' : 'Importar vendas da maquininha'} em ${c.conta}`} />
             <button onClick={() => input.current?.click()} disabled={enviando} style={botaoPrimarioCompacto(enviando)}>
-              {enviando ? 'Enviando…' : 'Importar OFX'}
+              {enviando ? 'Enviando…' : c.metodo === 'ofx' ? 'Importar OFX' : 'Importar vendas (CSV)'}
             </button>
           </>
         ) : <span />}

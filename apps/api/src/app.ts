@@ -766,7 +766,8 @@ export function criarApp(deps: Deps) {
       arquivo = v instanceof File ? v : null
     } catch { /* cai no erro abaixo */ }
     if (!arquivo) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'envie o arquivo no campo "arquivo"' })
-    if (!/\.ofx$/i.test(arquivo.name)) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'o arquivo precisa ser .ofx' })
+    // .ofx (banco) ou .csv/.txt (maquininha, 0015); se o formato não bate com a conexão, o worker recusa com o motivo
+    if (!/\.(ofx|csv|txt)$/i.test(arquivo.name)) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'o arquivo precisa ser .ofx (banco) ou .csv (maquininha)' })
     const b64 = Buffer.from(await arquivo.arrayBuffer()).toString('base64')
     const [r] = await escrever(c, (q) => q<{ r: { id_extrato: string; duplicado: boolean; id_job: number | null } }>(
       `select bpo_fin.fn_registrar_extrato($1, $2, $3) r`, [id, arquivo!.name, b64]))

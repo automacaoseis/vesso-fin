@@ -18,8 +18,8 @@ export async function extratosDa(idConexao: string) {
 export async function enviarOfx(idConexao: string, form: FormData) {
   const id = zId.parse(idConexao)
   const arquivo = form.get('arquivo')
-  if (!(arquivo instanceof File) || arquivo.size === 0) return { ok: false as const, mensagem: 'escolha um arquivo .ofx', status: 422 }
-  if (!/\.ofx$/i.test(arquivo.name)) return { ok: false as const, mensagem: 'o arquivo precisa ser .ofx', status: 422 }
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { ok: false as const, mensagem: 'escolha um arquivo', status: 422 }
+  if (!/\.(ofx|csv|txt)$/i.test(arquivo.name)) return { ok: false as const, mensagem: 'o arquivo precisa ser .ofx (banco) ou .csv (maquininha)', status: 422 }
   if (arquivo.size > 5 * 1024 * 1024) return { ok: false as const, mensagem: 'arquivo maior que 5 MB', status: 422 }
   const f = new FormData()
   f.set('arquivo', arquivo, z.string().max(200).parse(arquivo.name))

@@ -4,6 +4,7 @@
 import type pg from 'pg'
 import { comHash } from '@vesso-fin/shared/hash'
 import { lerOfx, OfxInvalido } from './ofx'
+import { AdquirenteInvalido, lerAdquirente, montarMovimentos } from './adquirente'
 
 /** Erro do arquivo ou do cadastro: tentar de novo não resolve. */
 export class ErroPermanente extends Error {}
@@ -11,6 +12,9 @@ export class ErroPermanente extends Error {}
 export interface ResultadoExtrato {
   lidas: number; novas: number; ja_existiam: number; removidas: number; reapareceram: number
   anteriores_ao_corte: number; zeradas: number; fitid_repetido: number
+  /** só maquininha (0015): vendas canceladas/estornadas no arquivo, linhas do dia corrente (parciais) e totais de um
+   *  dia já gravado que vieram DIFERENTES (cancelamento posterior etc.) — esses não são reescritos, ficam para o analista */
+  canceladas?: number; dia_em_andamento?: number; divergentes?: number
 }
 
 export async function processarExtrato(c: pg.ClientBase, idExtrato: string): Promise<ResultadoExtrato> {
@@ -22,6 +26,7 @@ export async function processarExtrato(c: pg.ClientBase, idExtrato: string): Pro
        join bpo_fin.organizacoes o on o.id_org = e.id_org
       where e.id_extrato = $1`, [idExtrato])
   if (!x) throw new ErroPermanente('extrato não encontrado')
+  if (x.payload?.formato === 'adquirente_csv') return processarAdquirente(c, x, idExtrato)
   if (x.payload?.formato !== 'ofx' || typeof x.payload.base64 !== 'string') throw new ErroPermanente('extrato sem arquivo OFX no payload')
 
   let ofx
@@ -111,3 +116,62 @@ export async function processarExtrato(c: pg.ClientBase, idExtrato: string): Pro
       where id_conexao = $1`, [x.id_conexao, ultimo])
   return r
 }
+
+// ─── maquininha / adquirente (0015) ───────────────────────────────────────────────────────────────────
+const hojeSP = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function processarAdquirente(c: pg.ClientBase, x: any, idExtrato: string, hoje = hojeSP()): Promise<ResultadoExtrato> {
+  if (typeof x.payload.base64 !== 'string') throw new ErroPermanente('extrato sem arquivo no payload')
+  let leitura
+  try { leitura = lerAdquirente(Buffer.from(x.payload.base64, 'base64')) } catch (e) {
+    if (e instanceof AdquirenteInvalido) throw new ErroPermanente(e.message)
+    throw e
+  }
+  const { movimentos, saldo, parciais, anteriores } = montarMovimentos(leitura.vendas, hoje, x.competencia_inicial)
+  const r: ResultadoExtrato = { lidas: leitura.vendas.length, novas: 0, ja_existiam: 0, removidas: 0, reapareceram: 0, anteriores_ao_corte: anteriores,
+    zeradas: 0, fitid_repetido: 0, canceladas: leitura.canceladas, dia_em_andamento: parciais, divergentes: 0 }
+
+  // id_externo = a chave do agregado (tipo|dia|produto|bandeira): o mesmo dia reimportado cai no índice único e não duplica
+  const linhas = comHash(movimentos.map((m) => ({ idConta: x.id_conta as string, data: m.data, valor: m.valor, descricao: m.descricao, m }))).map((l) => ({
+    id_externo: l.m.chave, hash_natural: l.hash, data_movimento: l.data, valor: l.valor, descricao_bruta: l.m.descricao,
+    payload_raw: { adquirente: { tipo: l.m.tipo, qtd: l.m.qtd, colunas: leitura.colunas }, seq: l.seq },
+  }))
+  const { rows: novas } = await c.query(
+    `insert into bpo_fin.movimentos (id_org, id_conta, id_extrato, origem, id_externo, hash_natural, data_movimento, valor, descricao_bruta, payload_raw)
+     select $1, $2, $3, 'adquirente', l.id_externo, l.hash_natural, l.data_movimento, l.valor, l.descricao_bruta, l.payload_raw
+       from jsonb_to_recordset($4::jsonb) as l(id_externo text, hash_natural text, data_movimento date, valor numeric, descricao_bruta text, payload_raw jsonb)
+     on conflict do nothing
+     returning id_movimento`, [x.id_org, x.id_conta, idExtrato, JSON.stringify(linhas)])
+  r.novas = novas.length
+  r.ja_existiam = linhas.length - novas.length
+  if (r.ja_existiam > 0) {
+    const { rows: [d] } = await c.query(
+      `select count(*)::int n from bpo_fin.movimentos m join jsonb_to_recordset($2::jsonb) as l(id_externo text, valor numeric)
+          on m.id_externo = l.id_externo
+        where m.id_conta = $1 and m.origem = 'adquirente' and m.valor <> l.valor`, [x.id_conta, JSON.stringify(linhas)])
+    r.divergentes = d.n
+  }
+
+  if (saldo) {
+    await c.query(
+      `insert into bpo_fin.saldos_extrato (id_conta, data, saldo, id_extrato) values ($1, $2, $3, $4)
+       on conflict (id_conta, data) do update set saldo = excluded.saldo, id_extrato = excluded.id_extrato`,
+      [x.id_conta, saldo.data, saldo.valor, idExtrato])
+  }
+  const datas = movimentos.map((m) => m.data).sort()
+  await c.query(
+    `update bpo_fin.extratos set status = 'processado', processado_em = now(),
+            erro_msg = case when $8::int > 0 then $8 || ' dia(s) já importado(s) vieram com total diferente (cancelamento posterior?) — confira na Conciliação' end,
+            linhas_lidas = $2, linhas_novas = $3, linhas_removidas = 0, periodo_inicio = $4, periodo_fim = $5,
+            saldo_final_informado = $6, data_saldo_final = $7
+      where id_extrato = $1`,
+    [idExtrato, r.lidas, r.novas, datas[0] ?? null, datas.at(-1) ?? null, saldo?.valor ?? null, saldo?.data ?? null, r.divergentes])
+  await c.query(
+    `update bpo_fin.conexoes set ultima_importacao_em = now(), status = 'ativa', erro_msg = null,
+            ultimo_movimento_em = greatest(ultimo_movimento_em, $2::date)
+      where id_conexao = $1`, [x.id_conexao, datas.at(-1) ?? null])
+  return r
+}
+
+export { processarAdquirente as _processarAdquirenteParaTeste }

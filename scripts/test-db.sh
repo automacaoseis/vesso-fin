@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 command -v psql >/dev/null || export PATH="$(brew --prefix postgresql@16)/bin:$PATH"
-MIGS=(sql/0001_bpo_fin_nucleo.sql sql/0003_bpo_fin_search_path_funcoes_hash.sql sql/0004_bpo_fin_upload_extrato_desfazer_transferencia.sql sql/0005_bpo_fin_sync_asaas.sql sql/0007_bpo_fin_informar_saldo.sql sql/0008_bpo_fin_acessos.sql sql/0009_bpo_fin_documentos.sql sql/0010_bpo_fin_portal_cliente.sql sql/0011_bpo_fin_cadastro.sql sql/0012_bpo_fin_plano_modelo_feriados.sql)
+MIGS=(sql/0001_bpo_fin_nucleo.sql sql/0003_bpo_fin_search_path_funcoes_hash.sql sql/0004_bpo_fin_upload_extrato_desfazer_transferencia.sql sql/0005_bpo_fin_sync_asaas.sql sql/0007_bpo_fin_informar_saldo.sql sql/0008_bpo_fin_acessos.sql sql/0009_bpo_fin_documentos.sql sql/0010_bpo_fin_portal_cliente.sql sql/0011_bpo_fin_cadastro.sql sql/0012_bpo_fin_plano_modelo_feriados.sql sql/0015_bpo_fin_adquirente.sql)
 STUBS=(test/00_stubs_supabase.sql test/01_stub_vault.sql)
 novo() { dropdb --if-exists "$1" 2>/dev/null; createdb --template=template0 --locale-provider=icu --icu-locale=en-US --locale=en_US.UTF-8 "$1"; }
 aplicar() { local db=$1; shift; local args=(); for f in "$@"; do args+=(-f "$f"); done; psql -d "$db" -v ON_ERROR_STOP=1 -q "${args[@]}" >/dev/null 2>&1; }
