@@ -766,8 +766,11 @@ export function criarApp(deps: Deps) {
       arquivo = v instanceof File ? v : null
     } catch { /* cai no erro abaixo */ }
     if (!arquivo) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'envie o arquivo no campo "arquivo"' })
-    // .ofx (banco) ou .csv/.txt (maquininha, 0015); se o formato não bate com a conexão, o worker recusa com o motivo
-    if (!/\.(ofx|csv|txt)$/i.test(arquivo.name)) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'o arquivo precisa ser .ofx (banco) ou .csv (maquininha)' })
+    // a extensão tem que bater com a conexão: banco = .ofx; maquininha (0015) = .csv/.txt. Conexão que a pessoa não vê
+    // não é checada aqui — a RPC responde 403 por ela.
+    const [cx] = await ler(c, (q) => q<{ metodo: string }>(`select metodo from bpo_fin.conexoes where id_conexao = $1`, [id]))
+    if (cx?.metodo === 'ofx' && !/\.ofx$/i.test(arquivo.name)) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'esta conta recebe extrato do banco: o arquivo precisa ser .ofx' })
+    if (cx?.metodo === 'arquivo_adquirente' && !/\.(csv|txt)$/i.test(arquivo.name)) throw new ErroHttp(422, { erro: 'entrada_invalida', mensagem: 'esta conta é de maquininha: o arquivo precisa ser o .csv de vendas exportado do portal dela' })
     const b64 = Buffer.from(await arquivo.arrayBuffer()).toString('base64')
     const [r] = await escrever(c, (q) => q<{ r: { id_extrato: string; duplicado: boolean; id_job: number | null } }>(
       `select bpo_fin.fn_registrar_extrato($1, $2, $3) r`, [id, arquivo!.name, b64]))
